@@ -22,18 +22,18 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-export GO_EASY_ON_ME=1
+export TARGET = :clang:11.2:12.0
+export ARCHS = arm64
+export COPYFILE_DISABLE = 1
 
-export TARGET_CXX = xcrun -sdk iphoneos clang++
-export TARGET_LD = xcrun -sdk iphoneos clang++
-export TARGET = iphone:latest:5.0
-export ARCHS = armv7 armv7s arm64
-
-include theos/makefiles/common.mk
+include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = Infiniboard
-Infiniboard_FILES = Infiniboard.xmi
+Infiniboard_FILES = Infiniboard.xm
 Infiniboard_FRAMEWORKS = UIKit CoreGraphics QuartzCore CoreTelephony
+Infiniboard_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
+after-install::
+	install.exec "killall -9 SpringBoard"

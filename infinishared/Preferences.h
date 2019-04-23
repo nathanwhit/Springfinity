@@ -27,7 +27,10 @@
 
 /* }}} */
 
-#import "iPhonePrivate.h"
+#ifndef PREFERENCES_H
+#define PREFERENCES_H
+
+#include "iPhonePrivate.h"
 
 /* Preferences {{{ */
 static NSDictionary *preferences = nil;
@@ -97,4 +100,4 @@ __attribute__((unused)) static void IFPreferencesInitialize(NSString *bundleIden
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, IFPreferencesChangedCallback, (CFStringRef) [NSString stringWithFormat:@"%@.preferences-changed", bundleIdentifier], NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
 /* }}} */
-
+#endif
