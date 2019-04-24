@@ -38,7 +38,6 @@ static NSString *identifier = nil;
 static void (*callback)() = NULL;
 
 __attribute__((unused)) static void IFPreferencesLoad() {
-    [preferences release];
     preferences = [[NSDictionary alloc] initWithContentsOfFile:[NSString stringWithFormat:[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Preferences/%@.plist"], identifier]];
 }
 

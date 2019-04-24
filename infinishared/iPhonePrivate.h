@@ -66,6 +66,7 @@ typedef struct SBIconCoordinate {
 - (NSArray *)allIcons;
 - (NSIndexPath *)indexPathForIcon:(SBIcon *)icon;
 - (SBIconListModel *)listContainingIcon:(SBIcon *)icon;
+- (id)listsContainingIcon:(id)arg1;
 - (NSUInteger)indexOfList:(SBIconListModel *)list;
 @end
 
@@ -140,7 +141,7 @@ typedef struct SBIconCoordinate {
 + (SBIconController *)sharedInstance;
 
 @property (nonatomic, readonly) SBIconViewMap *homescreenIconViewMap; // iOS 9.3+
-
+- (id)rootFolder;
 - (UIInterfaceOrientation)orientation;
 
 - (BOOL)isEditing;
