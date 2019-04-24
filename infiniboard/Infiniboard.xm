@@ -40,13 +40,20 @@
 #define IFConfigurationScrollViewClass IFInfiniboardScrollView
 // #define IFConfigurationFullPages (dlopen("/Library/MobileSubstrate/DynamicLibraries/Iconoclasm.dylib", RTLD_LAZY) != NULL)
 
-#define IFPreferencesRestoreEnabled @"RestoreEnabled", NO
-#define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", NO
+#define IFPreferencesRestoreEnabled @"RestoreEnabled", YES
+#define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", YES
 
 #include <UIKit/UIKit.h>
 #include "infinishared/Infinilist.xm"
 #include "infinishared/Preferences.h"
 #include <substrate.h>
+
+
+@interface UIScrollView (iOS12)
+@property (nonatomic) UIEdgeInsets safeAreaInsets;
+@property (nonatomic) NSUInteger contentInsetAdjustmentBehavior;
+- (void)safeAreaInsetsDidChange;
+@end
 
 @interface IFInfiniboardScrollView : UIScrollView
 @end
@@ -812,13 +819,15 @@ static NSUInteger IFFlagFolderOpening = 0;
 /* }}} */
 
 static void IFIconListInitialize(SBIconListView *listView) {
-    log("Initializing iconlist");
     UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView frame]];
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
+    [scrollView setContentInsetAdjustmentBehavior: UIScrollViewContentInsetAdjustmentAlways];
+    [scrollView setSafeAreaInsets:UIEdgeInsetsMake(7, -2, 0, 0)];
 
     IFListsRegister(listView, scrollView);
     [listView addSubview:scrollView];
+    // [scrollView addSubview: listView];
 
     IFIconListSizingUpdateIconList(listView);
     IFPreferencesApplyToList(listView);
@@ -1402,6 +1411,13 @@ static void IFIconListInitialize(SBIconListView *listView) {
 /* Custom Scroll View {{{ */
 
 @implementation IFInfiniboardScrollView
+
+- (void)setSafeAreaInsets:(UIEdgeInsets)insets {
+    insets.top = 7;
+    insets.bottom = -1.95;
+    [super setSafeAreaInsets:insets];
+    [self safeAreaInsetsDidChange];
+}
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     log("gesture recognizer began");
