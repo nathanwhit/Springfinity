@@ -76,6 +76,7 @@ __attribute__((unused)) static SBIconController *IFIconControllerSharedInstance(
 __attribute__((unused)) static SBIconView *IFIconViewForIcon(SBIcon *icon) {
     SBIconController *iconController = IFIconControllerSharedInstance();
     if ([iconController respondsToSelector:@selector(homescreenIconViewMap)]) {
+        log("homescreeniconviewmap");
         SBIconViewMap *iconViewMap = [iconController homescreenIconViewMap];
         return [iconViewMap iconViewForIcon:icon];
     } else {
@@ -85,7 +86,7 @@ __attribute__((unused)) static SBIconView *IFIconViewForIcon(SBIcon *icon) {
 }
 
 __attribute__((unused)) static BOOL IFIconListIsValid(SBIconListView *listView) {
-    return [listView isKindOfClass:IFConfigurationListClassObject];
+    return [listView isMemberOfClass:IFConfigurationListClassObject];
 }
 
 /* }}} */
@@ -98,11 +99,15 @@ static NSMutableArray *IFListsScrollViews = nil;
 
 __attribute__((constructor)) static void IFListsInitialize() {
     // Non-retaining mutable arrays, since we don't want to own these objects.
-    IFListsListViews = [[NSMutableArray alloc] init];
-    IFListsScrollViews =[[NSMutableArray alloc] init];
+    // IFListsListViews = [[NSMutableArray alloc] init];
+    // IFListsScrollViews =[[NSMutableArray alloc] init];
+    CFArrayCallBacks callbacks = { 0, NULL, NULL, CFCopyDescription, CFEqual };
+    IFListsListViews = (__bridge NSMutableArray*)CFArrayCreateMutable(NULL, 0, &callbacks);
+    IFListsScrollViews = (__bridge NSMutableArray*)CFArrayCreateMutable(NULL, 0, &callbacks);
 }
 
 __attribute__((unused)) static void IFListsIterateViews(void (^block)(SBIconListView *, UIScrollView *)) {
+    log("Iterating views...");
     for (NSUInteger i = 0; i < IFMinimum([IFListsListViews count], [IFListsScrollViews count]); i++) {
         block([IFListsListViews objectAtIndex:i], [IFListsScrollViews objectAtIndex:i]);
     }
@@ -129,6 +134,9 @@ __attribute__((unused)) static UIScrollView *IFListsScrollViewForListView(SBIcon
 }
 
 __attribute__((unused)) static void IFListsRegister(SBIconListView *listView, UIScrollView *scrollView) {
+    log("registering views...");
+    logf("%{public}@", listView);
+    logf("%{public}@", scrollView);
     [IFListsListViews addObject:listView];
     [IFListsScrollViews addObject:scrollView];
 }
@@ -198,6 +206,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
     BOOL scroll = IFPreferencesBoolForKey(IFPreferencesScrollEnabled);
+    logf("SCROLL ENABLED: %d", scroll);
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
@@ -395,6 +404,7 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) 
 static NSMutableDictionary *IFIconListSizingStore = nil;
 
 __attribute__((constructor)) static void IFIconListSizingInitialize() {
+    log("Initializing IFIconListSizingStore...");
     IFIconListSizingStore = [[NSMutableDictionary alloc] init];
 }
 
@@ -784,6 +794,7 @@ static NSUInteger IFFlagFolderOpening = 0;
 /* }}} */
 
 static void IFIconListInitialize(SBIconListView *listView) {
+    log("Initializing iconlist");
     UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView frame]];
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
@@ -802,24 +813,36 @@ static void IFIconListInitialize(SBIconListView *listView) {
 /* View Hierarchy {{{ */
 
 - (id)initWithFrame:(CGRect)frame {
-    if ((self = %orig)) {
+    id ret = %orig;
+    if (self == ret) {
         // Avoid hooking a sub-initializer when we hook the base initializer, but otherwise do hook it.
-        if (IFIconListIsValid(self) && ![self respondsToSelector:@selector(initWithFrame:viewMap:)]) {
+        if (IFIconListIsValid(self) && ![self respondsToSelector:@selector(initWithModel:orientation:viewMap:)]) {
             IFIconListInitialize(self);
         }
     }
 
-    return self;
+    return ret;
 }
 
 - (id)initWithFrame:(CGRect)frame viewMap:(id)viewMap {
-    if ((self = %orig)) {
+    id ret = %orig;
+    if (self == ret) {
         if (IFIconListIsValid(self)) {
             IFIconListInitialize(self);
         }
     }
 
-    return self;
+    return ret;
+}
+
+- (id)initWithModel:(id)arg1 orientation:(NSUInteger)arg2 viewMap:(id)arg3 {
+    id ret = %orig;
+    if (self == ret) {
+        if (IFIconListIsValid(self)) {
+            IFIconListInitialize(self);
+        }
+    }
+    return ret;
 }
 
 - (void)dealloc {
@@ -835,8 +858,11 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (void)setFrame:(CGRect)frame {
+    log("Setting frame.....");
     if (IFIconListIsValid(self)) {
         UIScrollView *scrollView = IFListsScrollViewForListView(self);
+        log("self was valid");
+        logf("Scrollview : %{public}@", scrollView);
 
         NSUInteger pagex = 0;
         NSUInteger pagey = 0;
@@ -870,6 +896,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (void)addSubview:(UIView *)view {
+    log("adding subview...");
     if (IFIconListIsValid(self)) {
         UIScrollView *scrollView = IFListsScrollViewForListView(self);
 
@@ -984,20 +1011,20 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
-- (CGRect)bounds {
-    if (IFIconListIsValid(self)) {
-        // This check breaks icon positions on iOS 7.0+, but is needed on iOS 5.x and 6.x.
-        if (kCFCoreFoundationVersionNumber < 800.0 && IFFlagExpandedFrame) {
-            CGRect bounds = %orig;
-            bounds.size = IFIconListSizingEffectiveContentSize(self);
-            return bounds;
-        } else {
-            return %orig;
-        }
-    } else {
-        return %orig;
-    }
-}
+// - (CGRect)bounds {
+//     if (IFIconListIsValid(self)) {
+//         // This check breaks icon positions on iOS 7.0+, but is needed on iOS 5.x and 6.x.
+//         if (kCFCoreFoundationVersionNumber < 800.0 && IFFlagExpandedFrame) {
+//             CGRect bounds = %orig;
+//             bounds.size = IFIconListSizingEffectiveContentSize(self);
+//             return bounds;
+//         } else {
+//             return %orig;
+//         }
+//     } else {
+//         return %orig;
+//     }
+// }
 
 /* }}} */
 
@@ -1028,7 +1055,7 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
     return origin;
 }
 
-- (CGPoint)originForIconAtCoordinate:(SBIconCoordinate)coordinate {
+- (CGPoint)originForIconAtCoordinate:(struct SBIconCoordinate)coordinate {
     if (IFIconListIsValid(self)) {
         return IFIconListOriginForIconAtXY(self, coordinate.col - 1, coordinate.row - 1, ^(NSUInteger x, NSUInteger y) {
             SBIconCoordinate innerCoordinate = { .row = y + 1, .col = x + 1 };
@@ -1221,7 +1248,7 @@ static id grabbedIcon = nil;
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     log("gesture recognizer began");
     // Allow accessing Spotlight when scrolled to the top on iOS 7.0+.
-    if (NSClassFromString(@"SBSearchScrollView") != nil) {
+    if (%c(SBSearchScrollView) != nil) {
         if (gestureRecognizer == [self panGestureRecognizer]) {
             CGPoint offset = [self contentOffset];
             CGPoint velocity = [[self panGestureRecognizer] velocityInView:self];
