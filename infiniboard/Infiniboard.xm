@@ -324,7 +324,7 @@ static IFIconListDimensions IFSizingMaximumDimensionsForOrientation(UIInterfaceO
     return dimensions;
 }
 
-static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, NSUInteger iconsToAdd) {
     IFIconListDimensions dimensions = IFIconListDimensionsZero;
     UIInterfaceOrientation orientation = IFIconListOrientation(listView);
 
@@ -333,7 +333,7 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) 
 
         if (IFConfigurationExpandWhenEditing && [IFIconControllerSharedInstance() isEditing]) {
             // Add room to drop the icon into.
-            idx += 1;
+            idx += iconsToAdd;
         }
 
         IFIconListDimensions maximumDimensions = IFSizingMaximumDimensionsForOrientation(orientation);
@@ -366,6 +366,10 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) 
     dimensions.columns = (dimensions.columns > defaultDimensions.columns) ? dimensions.columns : defaultDimensions.columns;
 
     return dimensions;
+}
+
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
+    return IFSizingContentDimensions(listView, 1);
 }
 
 /* }}} */
@@ -433,6 +437,15 @@ static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconLis
     [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
     [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
     [info setContentDimensions:IFSizingContentDimensions(listView)];
+    return info;
+}
+
+static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconList(SBIconListView *listView, NSUInteger iconsToAdd) {
+    IFIconListSizingInformation *info = [[IFIconListSizingInformation alloc] init];
+    [info setDefaultDimensions:_IFSizingDefaultDimensions(listView)];
+    [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
+    [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
+    [info setContentDimensions:IFSizingContentDimensions(listView, iconsToAdd)];
     return info;
 }
 
@@ -516,6 +529,13 @@ static void IFIconListSizingUpdateIconList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
     IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView), listView);
+    IFIconListSizingUpdateContentSize(listView, scrollView);
+}
+
+static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUInteger iconsToAdd) {
+    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+
+    IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView, iconsToAdd), listView);
     IFIconListSizingUpdateContentSize(listView, scrollView);
 }
 
@@ -617,13 +637,9 @@ static NSUInteger IFFlagFolderOpening = 0;
 - (void)openFolderIcon:(id)arg1 animated:(_Bool)arg2 withCompletion:(id)arg3 {
     %orig;
     if ([arg1 isKindOfClass:%c(SBIcon)]) {
-        log("OKAY");
         SBIcon *folderIcon = (SBIcon*)arg1;
-        logf("%{public}@", folderIcon);
         SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-        logf("%{public}@", listView);
         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        logf("%{public}@", scrollView);
         if (scrollView != nil) {
             // We have a scroll view, so this is a list we care about.
             SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
@@ -678,38 +694,38 @@ static NSUInteger IFFlagFolderOpening = 0;
 //     return f;
 // }
 
-- (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
-    log("CONTENTVIEW HOOKED");
-    SBIconListView *listView = IFIconListContainingIcon(icon);
-    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+// - (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
+//     log("CONTENTVIEW HOOKED");
+//     SBIconListView *listView = IFIconListContainingIcon(icon);
+//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
-    if (IFIconListIsValid(listView) && IFFlagFolderOpening && IFPreferencesBoolForKey(IFPreferencesClipsToBounds)) {
-        SBIconView *iconView = IFIconViewForIcon(icon);
-        CGRect iconRect = [iconView frame];
+//     if (IFIconListIsValid(listView) && IFFlagFolderOpening && IFPreferencesBoolForKey(IFPreferencesClipsToBounds)) {
+//         SBIconView *iconView = IFIconViewForIcon(icon);
+//         CGRect iconRect = [iconView frame];
 
-        CGRect scrollVisibleFrame = [scrollView frame];
-        scrollVisibleFrame.origin = [scrollView contentOffset];
+//         CGRect scrollVisibleFrame = [scrollView frame];
+//         scrollVisibleFrame.origin = [scrollView contentOffset];
 
-        if (CGRectIntersectsRect(iconRect, scrollVisibleFrame)) {
-            return %orig;
-        } else {
-            CGRect frame = %orig;
-            return CGRectMake(-1000, -1000, frame.size.width, frame.size.height);
-        }
-    } else {
-        return %orig;
-    }
-}
+//         if (CGRectIntersectsRect(iconRect, scrollVisibleFrame)) {
+//             return %orig;
+//         } else {
+//             CGRect frame = %orig;
+//             return CGRectMake(-1000, -1000, frame.size.width, frame.size.height);
+//         }
+//     } else {
+//         return %orig;
+//     }
+// }
 
-- (void)openFolder:(SBFolder *)folder animated:(BOOL)animated fromSwitcher:(BOOL)fromSwitcher {
-    log("HERE");
-    // Let -iconAtPoint: know that it can slide SpringBoard "upwards" if necessary.
-    IFFlag(IFFlagFolderOpening) {
-        IFFlag(IFFlagDefaultDimensions) {
-            %orig;
-        }
-    }
-}
+// - (void)openFolder:(SBFolder *)folder animated:(BOOL)animated fromSwitcher:(BOOL)fromSwitcher {
+//     log("HERE");
+//     // Let -iconAtPoint: know that it can slide SpringBoard "upwards" if necessary.
+//     IFFlag(IFFlagFolderOpening) {
+//         IFFlag(IFFlagDefaultDimensions) {
+//             %orig;
+//         }
+//     }
+// }
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     %orig;
@@ -890,7 +906,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
             offset.x = (pagex * bounds.size.width);
             offset.y = (pagey * bounds.size.height);
-            [scrollView setContentOffset:offset animated:NO];
+            [scrollView setContentOffset:offset animated:YES];
         }
     } else {
         %orig;
@@ -1032,56 +1048,55 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 /* Positioning {{{ */
 
-static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, NSUInteger y, CGPoint (^orig)(NSUInteger, NSUInteger)) {
-    CGPoint origin = CGPointZero;
+// static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, NSUInteger y, CGPoint (^orig)(NSUInteger, NSUInteger)) {
+//     CGPoint origin = CGPointZero;
 
-    IFFlag(IFFlagExpandedFrame) {
-        UIScrollView *scrollView = IFListsScrollViewForListView(self);
+//     IFFlag(IFFlagExpandedFrame) {
+//         UIScrollView *scrollView = IFListsScrollViewForListView(self);
 
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-            IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
+//         if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+//             IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
 
-            NSUInteger px = (x / dimensions.columns), py = (y / dimensions.rows);
-            NSUInteger ix = (x % dimensions.columns), iy = (y % dimensions.rows);
+//             NSUInteger px = (x / dimensions.columns), py = (y / dimensions.rows);
+//             NSUInteger ix = (x % dimensions.columns), iy = (y % dimensions.rows);
 
-            origin = orig(ix, iy);
+//             origin = orig(ix, iy);
 
-            CGSize size = [scrollView frame].size;
-            origin.x += (size.width) * px;
-            origin.y += (size.height) * py;
-        } else {
-            origin = orig(x, y);
-        }
-    }
+//             CGSize size = [scrollView frame].size;
+//             origin.x += (size.width) * px;
+//             origin.y += (size.height) * py;
+//         } else {
+//             origin = orig(x, y);
+//         }
+//     }
 
-    return origin;
-}
+//     return origin;
+// }
 
-- (CGPoint)originForIconAtCoordinate:(struct SBIconCoordinate)coordinate {
-    log("originforiconatcoordinate");
-    if (IFIconListIsValid(self)) {
-        return IFIconListOriginForIconAtXY(self, coordinate.col - 1, coordinate.row - 1, ^(NSUInteger x, NSUInteger y) {
-            SBIconCoordinate innerCoordinate = { .row = y + 1, .col = x + 1 };
-            return %orig(innerCoordinate);
-        });
-    } else {
-        return %orig;
-    }
-}
+// - (CGPoint)originForIconAtCoordinate:(struct SBIconCoordinate)coordinate {
+//     log("origin for icon at coordinate");
+//     if (IFIconListIsValid(self)) {
+//         return IFIconListOriginForIconAtXY(self, coordinate.col - 1, coordinate.row - 1, ^(NSUInteger x, NSUInteger y) {
+//             SBIconCoordinate innerCoordinate = { .row = y + 1, .col = x + 1 };
+//             return %orig(innerCoordinate);
+//         });
+//     } else {
+//         return %orig;
+//     }
+// }
 
-- (CGPoint)originForIconAtX:(NSUInteger)x Y:(NSUInteger)y {
-    log("originforiconatxy");
-    if (IFIconListIsValid(self)) {
-        return IFIconListOriginForIconAtXY(self, x, y, ^(NSUInteger x, NSUInteger y) {
-            return %orig(x, y);
-        });
-    } else {
-        return %orig;
-    }
-}
+// - (CGPoint)originForIconAtX:(NSUInteger)x Y:(NSUInteger)y {
+//     log("originforiconatxy");
+//     if (IFIconListIsValid(self)) {
+//         return IFIconListOriginForIconAtXY(self, x, y, ^(NSUInteger x, NSUInteger y) {
+//             return %orig(x, y);
+//         });
+//     } else {
+//         return %orig;
+//     }
+// }
 
 - (NSUInteger)rowAtPoint:(CGPoint)point {
-    log("rowAtPoint");
     if (IFIconListIsValid(self)) {
         NSUInteger row = 0;
 
@@ -1139,23 +1154,23 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
     }
 }
 
-- (struct CGPoint)_wallpaperRelativeIconCenterForIconView:(id)arg1 {
-    log("wallpaperrelative");
-    SBIconListView *listView = IFIconListContainingIcon((SBIcon*)[arg1 icon]);
-    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+// - (struct CGPoint)_wallpaperRelativeIconCenterForIconView:(id)arg1 {
+//     log("wallpaperrelative");
+//     SBIconListView *listView = IFIconListContainingIcon((SBIcon*)[arg1 icon]);
+//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
-    CGPoint ret = %orig;
+//     CGPoint ret = %orig;
 
-    // The list could, in theory, be in another list that
-    // we don't care about. If it is, we won't have a scroll
-    // view for it, and can safely ignore moving the icon.
-    if (scrollView != nil) {
-        ret.x -= [scrollView contentOffset].x;
-        ret.y -= [scrollView contentOffset].y;
-    }
+//     // The list could, in theory, be in another list that
+//     // we don't care about. If it is, we won't have a scroll
+//     // view for it, and can safely ignore moving the icon.
+//     if (scrollView != nil) {
+//         ret.x -= [scrollView contentOffset].x;
+//         ret.y -= [scrollView contentOffset].y;
+//     }
 
-    return ret;
-}
+//     return ret;
+// }
 
 /* }}} */
 /* }}} */
@@ -1167,7 +1182,7 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
 // %hook UIScrollView
 
 // FIXME: this is an ugly hack
-static id grabbedIcon = nil;
+// static id grabbedIcon = nil;
 // - (void)setContentOffset:(CGPoint)offset {
 //     if (grabbedIcon != nil && [IFListsScrollViews containsObject:self]) {
 //         // Prevent weird auto-scrolling behavior while dragging icons.
@@ -1229,9 +1244,9 @@ static id grabbedIcon = nil;
 // }
 
 - (id)placeIcon:(id)icon atIndexPath:(id)arg2 options:(unsigned long long)arg3 {
-    log("Placing icon...");
+    // log("Placing icon...");
     id ret = %orig;
-    grabbedIcon = nil;
+    // grabbedIcon = nil;
     SBFolderIconListView *listView = [self currentFolderIconList];
 
     if (IFIconListIsValid(listView)) {
@@ -1251,37 +1266,37 @@ static id grabbedIcon = nil;
     %orig;
 }
 
-- (void)setGrabbedIcon:(id)icon {
-    log("icon grabbed");
-    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-        [scrollView setScrollEnabled:(icon == nil)];
-    });
+// - (void)setGrabbedIcon:(id)icon {
+//     log("icon grabbed");
+//     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+//         [scrollView setScrollEnabled:(icon == nil)];
+//     });
 
-    %orig;
+//     %orig;
 
-    if (icon != nil) {
-        grabbedIcon = icon;
-    } else {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            grabbedIcon = nil;
-        });
-    }
-}
+    // if (icon != nil) {
+    //     grabbedIcon = icon;
+    // } else {
+    //     dispatch_async(dispatch_get_main_queue(), ^{
+    //         grabbedIcon = nil;
+    //     });
+    // }
+// }
 
-- (void)setIsEditing:(BOOL)editing {
-    log("is editing");
-    %orig;
+// - (void)setIsEditing:(BOOL)editing {
+//     log("is editing");
+//     %orig;
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-            IFIconListSizingUpdateIconList(listView);
-        });
-    });
-}
+//     dispatch_async(dispatch_get_main_queue(), ^{
+//         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+//             IFIconListSizingUpdateIconList(listView);
+//         });
+//     });
+// }
 
 - (void)_moveIconViewToContentView:(id)arg1 {
     %orig;
-    logf("Moving icon view to content view ... %{public}@", arg1);
+    // logf("Moving icon view to content view ... %{public}@", arg1);
 }
 
 %end
@@ -1292,25 +1307,25 @@ static id grabbedIcon = nil;
 
 %hook SBIconDragManager
 - (void)performIconDrop:(id)arg1 identifier:(id)arg2 draggedIconIdentifiers:(id)arg3 inIconListView:(id)arg4 {
+        log("Dropping icons...");
         %orig;
         if (IFIconListIsValid(arg4)) {
-        SBIconListView *listView = (SBIconListView*)arg4;
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        NSMutableArray *icons = [self draggedIconsForIdentifiers:arg3];
-        for (int i = 0; i < [icons count]; i++) {
-            SBIconView *iconView = IFIconViewForIcon(icons[i]);
-            CGRect frame = [iconView frame];
-            frame.origin.x += [scrollView contentOffset].x;
-            frame.origin.y += [scrollView contentOffset].y;
-            [iconView setFrame:frame];
-        }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-                IFIconListSizingUpdateIconList(listView);
+            // SBIconListView *listView = (SBIconListView*)arg4;
+            // UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+            // NSMutableArray *icons = [self draggedIconsForIdentifiers:arg3];
+            // for (int i = 0; i < [icons count]; i++) {
+            //     SBIconView *iconView = IFIconViewForIcon(icons[i]);
+            //     CGRect frame = [iconView frame];
+            //     frame.origin.x += [scrollView contentOffset].x;
+            //     frame.origin.y += [scrollView contentOffset].y;
+            //     [iconView setFrame:frame];
+            // }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+                    IFIconListSizingUpdateIconListForDrop(listView, [arg3 count]);
+                });
             });
-        });
     }
-
 }
 // - (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
 //     %orig;
@@ -1328,9 +1343,12 @@ static id grabbedIcon = nil;
 %end
 
 // %hook SBIconDragContext
-// - (void)addGrabbedIconView:(id)iconView {
+// - (void)setGrabbedIconViews:(id)iconViews {
 //     %orig;
-//     log("Adding grabbed icon view...");
+//     log("Adding grabbed icon views...");
+//     for (int i = 0; i < [iconViews count]; i++) {
+
+//     }
 // }
 // - (void)addSourceIcon:(id)icon {
 //     %orig;
@@ -1370,12 +1388,12 @@ static id grabbedIcon = nil;
 
 /* }}} */
 
-%hook SBIconScrollView
-- (void)setContentOffset:(struct CGPoint)arg1 animated:(_Bool)arg2 {
-    %orig;
-    log("Setting content offset...");
-}
-%end
+// %hook SBIconScrollView
+// - (void)setContentOffset:(struct CGPoint)arg1 animated:(_Bool)arg2 {
+//     %orig;
+//     log("Setting content offset...");
+// }
+// %end
 
 %end
 
