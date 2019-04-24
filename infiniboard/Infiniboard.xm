@@ -30,6 +30,7 @@
 /* Configuration {{{ */
 
 #include <os/log.h>
+#include "InspCWrapper.m"
 #define log(str) os_log(OS_LOG_DEFAULT, str)
 #define logf(fmt, str) os_log(OS_LOG_DEFAULT, fmt, str)
 
@@ -418,6 +419,7 @@ static IFIconListDimensions IFSizingDefaultDimensionsForIconList(SBIconListView 
 }
 
 static void IFIconListSizingSetInformationForIconList(IFIconListSizingInformation *information, SBIconListView *listView) {
+    log("Setting sizing info");
     [IFIconListSizingStore setObject:information forKey:[NSValue valueWithNonretainedObject:listView]];
 }
 
@@ -1056,6 +1058,7 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
 }
 
 - (CGPoint)originForIconAtCoordinate:(struct SBIconCoordinate)coordinate {
+    log("originforiconatcoordinate");
     if (IFIconListIsValid(self)) {
         return IFIconListOriginForIconAtXY(self, coordinate.col - 1, coordinate.row - 1, ^(NSUInteger x, NSUInteger y) {
             SBIconCoordinate innerCoordinate = { .row = y + 1, .col = x + 1 };
@@ -1067,6 +1070,7 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
 }
 
 - (CGPoint)originForIconAtX:(NSUInteger)x Y:(NSUInteger)y {
+    log("originforiconatxy");
     if (IFIconListIsValid(self)) {
         return IFIconListOriginForIconAtXY(self, x, y, ^(NSUInteger x, NSUInteger y) {
             return %orig(x, y);
@@ -1077,6 +1081,7 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
 }
 
 - (NSUInteger)rowAtPoint:(CGPoint)point {
+    log("rowAtPoint");
     if (IFIconListIsValid(self)) {
         NSUInteger row = 0;
 
@@ -1134,6 +1139,24 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
     }
 }
 
+- (struct CGPoint)_wallpaperRelativeIconCenterForIconView:(id)arg1 {
+    log("wallpaperrelative");
+    SBIconListView *listView = IFIconListContainingIcon((SBIcon*)[arg1 icon]);
+    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+
+    CGPoint ret = %orig;
+
+    // The list could, in theory, be in another list that
+    // we don't care about. If it is, we won't have a scroll
+    // view for it, and can safely ignore moving the icon.
+    if (scrollView != nil) {
+        ret.x -= [scrollView contentOffset].x;
+        ret.y -= [scrollView contentOffset].y;
+    }
+
+    return ret;
+}
+
 /* }}} */
 /* }}} */
 
@@ -1141,57 +1164,74 @@ static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, N
 
 /* Fixes {{{ */
 
-%hook UIScrollView
+// %hook UIScrollView
 
 // FIXME: this is an ugly hack
 static id grabbedIcon = nil;
-- (void)setContentOffset:(CGPoint)offset {
-    if (grabbedIcon != nil && [IFListsScrollViews containsObject:self]) {
-        // Prevent weird auto-scrolling behavior while dragging icons.
-        return;
-    } else {
-        %orig;
-    }
-}
+// - (void)setContentOffset:(CGPoint)offset {
+//     if (grabbedIcon != nil && [IFListsScrollViews containsObject:self]) {
+//         // Prevent weird auto-scrolling behavior while dragging icons.
+//         return;
+//     } else {
+//         %orig;
+//     }
+// }
 
-%end
+// %end
 
 %hook SBIconController
 
-- (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
-    SBIconListView *listView = IFIconListContainingIcon(icon);
-    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+// - (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
+//     SBIconListView *listView = IFIconListContainingIcon(icon);
+//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
-    CGRect ret = %orig;
+//     CGRect ret = %orig;
 
-    // The list could, in theory, be in another list that
-    // we don't care about. If it is, we won't have a scroll
-    // view for it, and can safely ignore moving the icon.
-    if (scrollView != nil) {
-        ret.origin.x -= [scrollView contentOffset].x;
-        ret.origin.y -= [scrollView contentOffset].y;
-    }
+//     // The list could, in theory, be in another list that
+//     // we don't care about. If it is, we won't have a scroll
+//     // view for it, and can safely ignore moving the icon.
+//     if (scrollView != nil) {
+//         ret.origin.x -= [scrollView contentOffset].x;
+//         ret.origin.y -= [scrollView contentOffset].y;
+//     }
 
-    return ret;
-}
+//     return ret;
+// }
 
-- (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
-    %orig;
+// - (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
+//     %orig;
 
-    if (IFIconListIsValid(listView)) {
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        SBIconView *iconView = IFIconViewForIcon(icon);
+//     if (IFIconListIsValid(listView)) {
+//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+//         SBIconView *iconView = IFIconViewForIcon(icon);
 
-        CGRect frame = [iconView frame];
-        frame.origin.x += [scrollView contentOffset].x;
-        frame.origin.y += [scrollView contentOffset].y;
-        [iconView setFrame:frame];
-    }
-}
+//         CGRect frame = [iconView frame];
+//         frame.origin.x += [scrollView contentOffset].x;
+//         frame.origin.y += [scrollView contentOffset].y;
+//         [iconView setFrame:frame];
+//     }
+// }
 
-- (void)_dropIconIntoOpenFolder:(SBIcon *)icon withInsertionPath:(NSIndexPath *)path {
-    %orig;
+// - (void)_dropIconIntoOpenFolder:(SBIcon *)icon withInsertionPath:(NSIndexPath *)path {
+//     %orig;
 
+//     SBFolderIconListView *listView = [self currentFolderIconList];
+
+//     if (IFIconListIsValid(listView)) {
+//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+//         SBIconView *iconView = IFIconViewForIcon(icon);
+
+//         CGRect frame = [iconView frame];
+//         frame.origin.x -= [scrollView contentOffset].x;
+//         frame.origin.y -= [scrollView contentOffset].y;
+//         [iconView setFrame:frame];
+//     }
+// }
+
+- (id)placeIcon:(id)icon atIndexPath:(id)arg2 options:(unsigned long long)arg3 {
+    log("Placing icon...");
+    id ret = %orig;
+    grabbedIcon = nil;
     SBFolderIconListView *listView = [self currentFolderIconList];
 
     if (IFIconListIsValid(listView)) {
@@ -1203,6 +1243,12 @@ static id grabbedIcon = nil;
         frame.origin.y -= [scrollView contentOffset].y;
         [iconView setFrame:frame];
     }
+    return ret;
+}
+
+- (void)folderController:(id)arg1 iconListView:(id)arg2 performIconDrop:(id)arg3 {
+    // logf("Performing icon drop with ... %{public}@", [[arg3 items][0] itemProvider]);
+    %orig;
 }
 
 - (void)setGrabbedIcon:(id)icon {
@@ -1233,9 +1279,103 @@ static id grabbedIcon = nil;
     });
 }
 
+- (void)_moveIconViewToContentView:(id)arg1 {
+    %orig;
+    logf("Moving icon view to content view ... %{public}@", arg1);
+}
+
 %end
 
+@interface SBIconDragManager
+- (id)draggedIconsForIdentifiers:(id)arg;
+@end
+
+%hook SBIconDragManager
+- (void)performIconDrop:(id)arg1 identifier:(id)arg2 draggedIconIdentifiers:(id)arg3 inIconListView:(id)arg4 {
+        %orig;
+        if (IFIconListIsValid(arg4)) {
+        SBIconListView *listView = (SBIconListView*)arg4;
+        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+        NSMutableArray *icons = [self draggedIconsForIdentifiers:arg3];
+        for (int i = 0; i < [icons count]; i++) {
+            SBIconView *iconView = IFIconViewForIcon(icons[i]);
+            CGRect frame = [iconView frame];
+            frame.origin.x += [scrollView contentOffset].x;
+            frame.origin.y += [scrollView contentOffset].y;
+            [iconView setFrame:frame];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+                IFIconListSizingUpdateIconList(listView);
+            });
+        });
+    }
+
+}
+// - (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
+//     %orig;
+
+//     if (IFIconListIsValid(listView)) {
+//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+//         SBIconView *iconView = IFIconViewForIcon(icon);
+
+//         CGRect frame = [iconView frame];
+//         frame.origin.x += [scrollView contentOffset].x;
+//         frame.origin.y += [scrollView contentOffset].y;
+//         [iconView setFrame:frame];
+//     }
+// }
+%end
+
+// %hook SBIconDragContext
+// - (void)addGrabbedIconView:(id)iconView {
+//     %orig;
+//     log("Adding grabbed icon view...");
+// }
+// - (void)addSourceIcon:(id)icon {
+//     %orig;
+//     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+//         [scrollView setScrollEnabled:(icon == nil)];
+//     });
+
+//     // %orig;
+
+//     if (icon != nil) {
+//         grabbedIcon = icon;
+//     } else {
+//         dispatch_async(dispatch_get_main_queue(), ^{
+//             grabbedIcon = nil;
+//         });
+//     }
+// }
+// - (void)addDropAnimatingDragItem:(id)arg1 {
+//     %orig;
+//     logf("Adding drop animating drag item...%{public}@", arg1);
+// }
+// - (void)setState:(NSUInteger)state {
+//     if (state == 5) {
+//         dispatch_async(dispatch_get_main_queue(), ^{
+//             grabbedIcon = nil;
+//         });
+//     }
+//     %orig;
+//     logf("Setting state... %d", (unsigned int)state);
+// }
+
+// - (void)setDestinationFolderIconView:(id)arg1 forIconWithIdentifier:(id)arg2 {
+
+// }
+
+// %end
+
 /* }}} */
+
+%hook SBIconScrollView
+- (void)setContentOffset:(struct CGPoint)arg1 animated:(_Bool)arg2 {
+    %orig;
+    log("Setting content offset...");
+}
+%end
 
 %end
 
@@ -1269,6 +1409,7 @@ static id grabbedIcon = nil;
 /* Constructor {{{ */
 
 %ctor {
+    disableCompleteLogging();
     log("CTOR");
     IFListsInitialize();
     IFPreferencesInitialize(@"com.chpwn.infiniboard", IFPreferencesApply);
