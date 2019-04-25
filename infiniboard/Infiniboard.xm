@@ -40,8 +40,8 @@
 #define IFConfigurationScrollViewClass IFInfiniboardScrollView
 // #define IFConfigurationFullPages (dlopen("/Library/MobileSubstrate/DynamicLibraries/Iconoclasm.dylib", RTLD_LAZY) != NULL)
 
-#define IFPreferencesRestoreEnabled @"RestoreEnabled", YES
-#define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", YES
+#define IFPreferencesRestoreEnabled @"RestoreEnabled", NO
+#define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", NO
 
 #include <UIKit/UIKit.h>
 #include "infinishared/Infinilist.xm"
@@ -52,6 +52,7 @@
 @interface UIScrollView (iOS12)
 @property (nonatomic) UIEdgeInsets safeAreaInsets;
 @property (nonatomic) NSUInteger contentInsetAdjustmentBehavior;
+- (UIEdgeInsets)adjustedContentInset;
 - (void)safeAreaInsetsDidChange;
 @end
 
@@ -223,7 +224,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
-        [scrollView setIndicatorStyle:UIScrollViewIndicatorStyleDefault];
+        [scrollView setIndicatorStyle:UIScrollViewIndicatorStyleBlack];
     } else if (bar == kIFScrollbarStyleWhite) {
         [scrollView setIndicatorStyle:UIScrollViewIndicatorStyleWhite];
     } else if (bar == kIFScrollbarStyleNone) {
@@ -843,7 +844,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
     id ret = %orig;
     if (self == ret) {
         // Avoid hooking a sub-initializer when we hook the base initializer, but otherwise do hook it.
-        if (IFIconListIsValid(self) && ![self respondsToSelector:@selector(initWithModel:orientation:viewMap:)]) {
+        if (IFIconListIsValid(self) && ![self isKindOfClass:%c(SBDockIconListView)]) {
             IFIconListInitialize(self);
         }
     }
@@ -1134,34 +1135,34 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
-- (NSUInteger)columnAtPoint:(CGPoint)point {
-    if (IFIconListIsValid(self)) {
-        NSUInteger column = 0;
+// - (NSUInteger)columnAtPoint:(CGPoint)point {
+//     if (IFIconListIsValid(self)) {
+//         NSUInteger column = 0;
 
-        IFFlag(IFFlagExpandedFrame) {
-            UIScrollView *scrollView = IFListsScrollViewForListView(self);
-            CGPoint offset = [scrollView contentOffset];
-            CGSize size = [scrollView frame].size;
+//         IFFlag(IFFlagExpandedFrame) {
+//             UIScrollView *scrollView = IFListsScrollViewForListView(self);
+//             CGPoint offset = [scrollView contentOffset];
+//             CGSize size = [scrollView frame].size;
 
-            if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-                column = %orig;
+//             if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+//                 column = %orig;
 
-                NSUInteger page = (offset.x / size.width);
-                IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
-                column += page * dimensions.columns;
-            } else {
-                point.x += offset.x;
-                point.y += offset.y;
+//                 NSUInteger page = (offset.x / size.width);
+//                 IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
+//                 column += page * dimensions.columns;
+//             } else {
+//                 point.x += offset.x;
+//                 point.y += offset.y;
 
-                column = %orig;
-            }
-        }
+//                 column = %orig;
+//             }
+//         }
 
-        return column;
-    } else {
-        return %orig;
-    }
-}
+//         return column;
+//     } else {
+//         return %orig;
+//     }
+// }
 
 // - (struct CGPoint)_wallpaperRelativeIconCenterForIconView:(id)arg1 {
 //     log("wallpaperrelative");
@@ -1253,7 +1254,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 // }
 
 - (id)placeIcon:(id)icon atIndexPath:(id)arg2 options:(unsigned long long)arg3 {
-    // log("Placing icon...");
+    log("Placing icon...");
     id ret = %orig;
     // grabbedIcon = nil;
     SBFolderIconListView *listView = [self currentFolderIconList];
@@ -1270,10 +1271,10 @@ static void IFIconListInitialize(SBIconListView *listView) {
     return ret;
 }
 
-- (void)folderController:(id)arg1 iconListView:(id)arg2 performIconDrop:(id)arg3 {
+// - (void)folderController:(id)arg1 iconListView:(id)arg2 performIconDrop:(id)arg3 {
     // logf("Performing icon drop with ... %{public}@", [[arg3 items][0] itemProvider]);
-    %orig;
-}
+    // %orig;
+// }
 
 // - (void)setGrabbedIcon:(id)icon {
 //     log("icon grabbed");
@@ -1412,6 +1413,16 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 @implementation IFInfiniboardScrollView
 
+- (void)setContentOffset:(CGPoint)offset {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        if (offset.y <= 2) {
+            offset.y = -[self adjustedContentInset].top;
+        }
+    }
+    
+    [super setContentOffset:offset];
+}
+
 - (void)setSafeAreaInsets:(UIEdgeInsets)insets {
     insets.top = 7;
     insets.bottom = -1.95;
@@ -1443,7 +1454,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
 /* Constructor {{{ */
 
 %ctor {
-    disableCompleteLogging();
     log("CTOR");
     IFListsInitialize();
     IFPreferencesInitialize(@"com.chpwn.infiniboard", IFPreferencesApply);
