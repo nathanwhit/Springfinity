@@ -1311,9 +1311,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 %end
 
-@interface SBIconDragManager
-- (id)draggedIconsForIdentifiers:(id)arg;
-@end
 
 %hook SBIconDragManager
 - (void)performIconDrop:(id)arg1 identifier:(id)arg2 draggedIconIdentifiers:(id)arg3 inIconListView:(id)arg4 {

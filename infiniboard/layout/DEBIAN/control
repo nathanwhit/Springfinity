@@ -1,16 +1,13 @@
-Author: chpwn <support@chpwn.com>
-Maintainer: BigBoss <bigboss@thebigboss.org>
-Name: Infiniboard
-Package: com.chpwn.infiniboard
+Author: nwhit <nathan.whitaker01@gmail.com>
+Maintainer: Nathan Whitaker
+Name: Infiniboard12
+Package: com.nwhit.infiniboard12
 Section: Tweaks
 Pre-Depends: firmware (>= 5.0)
 Depends: mobilesubstrate, preferenceloader (>= 1.1), com.chpwn.iconsupport (>= 1.6)
-Version: 2.1.2
+Version: 3.0-b
 Architecture: iphoneos-arm
 Description: Vertically scroll your home screen pages!
-Depiction: http://chpwn.com/cydia/infiniboard.html
-Homepage: http://chpwn.com/cydia/infiniboard.html
-Sponsor: thebigboss.org <http://thebigboss.org>
 Icon: file:///Library/PreferenceLoader/Preferences/Infiniboard.png
-Tag: cydia::commercial
-dev: chpwn
+Tag: cydia::tweak
+dev: nwhit

@@ -21,8 +21,7 @@
 			<key>label</key>
 			<string>Settings</string>
 	        <key>footerText</key>
-	        <string>Infiniboard © 2010-2014 Xuzz Productions.
-Support is available in Cydia.</string>
+	        <string>Infiniboard12</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -34,9 +33,9 @@ Support is available in Cydia.</string>
 			<key>label</key>
 			<string>Vertical Scrolling</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -62,9 +61,9 @@ Support is available in Cydia.</string>
 				<integer>2</integer>
 			</array>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -90,9 +89,9 @@ Support is available in Cydia.</string>
 				<integer>2</integer>
 			</array>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -104,9 +103,9 @@ Support is available in Cydia.</string>
 			<key>label</key>
 			<string>Top on Paging</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -118,9 +117,9 @@ Support is available in Cydia.</string>
 			<key>label</key>
 			<string>Top on App Exit</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -132,9 +131,9 @@ Support is available in Cydia.</string>
 			<key>label</key>
 			<string>Vertical Paging</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -146,9 +145,9 @@ Support is available in Cydia.</string>
 			<key>label</key>
 			<string>Hide Behind Dock</string>
 			<key>PostNotification</key>
-			<string>com.chpwn.infiniboard.preferences-changed</string>
+			<string>com.nwhit.infiniboard12.preferences-changed</string>
 			<key>defaults</key>
-			<string>com.chpwn.infiniboard</string>
+			<string>com.nwhit.infiniboard12</string>
 		</dict>
 	</array>
 </dict>
