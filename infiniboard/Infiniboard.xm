@@ -923,19 +923,51 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
+- (BOOL)shouldReparentView:(UIView*)view {
+    logf("Should reparent view : %{public}@", view);
+    logf("With parent : %{public}@", [view superview]);
+    if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
+        log("Already owned");
+        return NO;
+    }
+    else {
+        return %orig;
+    }
+}
+
+
 - (void)addSubview:(UIView *)view {
-    log("adding subview...");
+    // if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
+    //     return;
+    // }
+    static SBIconListView *lastListView;
+    static UIScrollView *lastScrollView;
+    // logf("adding subview : %{public}@", view);
+    // logf("With parent : %{public}@", [view superview]);
+    // if (![view isHidden] && IFIconListIsValid(self) && ![[view superview] isKindOfClass:%c(SBRecycledViewsContainer)]) {
     if (IFIconListIsValid(self)) {
-        UIScrollView *scrollView = IFListsScrollViewForListView(self);
-
-        if (view == scrollView) {
-            %orig;
-        } else {
-            [scrollView addSubview:view];
-
-            IFIconListSizingUpdateIconList(self);
+        if (lastListView != self) {
+            log("List view wasn't the same as the last");
+            lastListView = self;
+            lastScrollView = IFListsScrollViewForListView(self);
         }
-    } else {
+
+        if (view == lastScrollView) {
+            %orig;
+        } 
+        else {
+            [lastScrollView addSubview:view];
+                // if ([view isKindOfClass:%c(SBIconView)]) {
+                    // CGRect frame = [view frame];
+                    IFIconListSizingUpdateIconList(self);
+                    // frame.origin.x += [lastScrollView contentOffset].x;
+                    // frame.origin.y += [lastScrollView contentOffset].y;
+                    // [view setFrame:frame];
+                // }
+        }
+        } 
+
+        else {
         %orig;
     }
 }
