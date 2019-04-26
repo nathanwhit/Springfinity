@@ -3,11 +3,11 @@ Maintainer: Nathan Whitaker
 Name: Infiniboard12
 Package: com.nwhit.infiniboard12
 Section: Tweaks
-Pre-Depends: firmware (>= 5.0)
-Depends: mobilesubstrate, preferenceloader (>= 1.1), com.chpwn.iconsupport (>= 1.6)
+Pre-Depends: firmware (>= 11.0)
+Depends: mobilesubstrate, com.chpwn.iconsupport (>= 1.6)
 Version: 3.0-b
 Architecture: iphoneos-arm
-Description: Vertically scroll your home screen pages!
+Description: A revival of infiniboard for iOS 11 & 12. Vertically scroll on your homescreen.
 Icon: file:///Library/PreferenceLoader/Preferences/Infiniboard.png
-Tag: cydia::tweak
+Tag: cydia::commercial
 dev: nwhit

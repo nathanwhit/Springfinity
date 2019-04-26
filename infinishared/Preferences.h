@@ -32,13 +32,15 @@
 
 #include "iPhonePrivate.h"
 
+#define BUNDLEID @"com.nwhit.infiniboard12prefs"
+
 /* Preferences {{{ */
 static NSDictionary *preferences = nil;
 static NSString *identifier = nil;
-static void (*callback)() = NULL;
+
 
 __attribute__((unused)) static void IFPreferencesLoad() {
-    preferences = [[NSDictionary alloc] initWithContentsOfFile:[NSString stringWithFormat:[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Preferences/%@.plist"], identifier]];
+    preferences = [[NSDictionary alloc] initWithContentsOfFile:[NSString stringWithFormat:@"/User/Library/Preferences/%@.plist", BUNDLEID]];
 }
 
 __attribute__((unused)) static BOOL IFPreferencesBoolForKey(NSString *key, BOOL def) {
@@ -59,44 +61,24 @@ __attribute__((unused)) static id IFPreferencesObjectForKey(NSString *key, id de
     return [preferences objectForKey:key] ?: def;
 }
 
-__attribute__((unused)) static SBIconModel *IFPreferencesSharedIconModel() {
-    Class modelClass = NSClassFromString(@"SBIconModel");
+// __attribute__((unused)) static void IFPreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+//     IFPreferencesLoad();
 
-    if ([modelClass respondsToSelector:@selector(sharedInstance)]) {
-        return [modelClass sharedInstance];
-    } else {
-        Class controllerClass = NSClassFromString(@"SBIconController");
-        SBIconController *controller = [controllerClass sharedInstance];
+//     if (callback != NULL) {
+//         callback();
+//     }
 
-        return [controller model];
-    }
-}
+//     IFPreferencesIconModelLayout(IFPreferencesSharedIconModel());
+// }
 
-__attribute__((unused)) static void IFPreferencesIconModelLayout(SBIconModel *model) {
-    if ([model respondsToSelector:@selector(relayout)]) {
-        [model relayout];
-    } else {
-        [model layout];
-    }
-}
-
-__attribute__((unused)) static void IFPreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-    IFPreferencesLoad();
-
-    if (callback != NULL) {
-        callback();
-    }
-
-    IFPreferencesIconModelLayout(IFPreferencesSharedIconModel());
-}
-
-__attribute__((unused)) static void IFPreferencesInitialize(NSString *bundleIdentifier, void (*cb)()) {
+__attribute__((unused)) static void IFPreferencesInitialize(NSString *bundleIdentifier) {
     identifier = [bundleIdentifier copy];
-    callback = cb;
+    // callback = cb;
 
     IFPreferencesLoad();
+    // IFPreferencesIconModelLayout(IFPreferencesSharedIconModel());
 
-    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, IFPreferencesChangedCallback, (CFStringRef) [NSString stringWithFormat:@"%@.preferences-changed", bundleIdentifier], NULL, CFNotificationSuspensionBehaviorCoalesce);
+    // CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, IFPreferencesChangedCallback, (CFStringRef) [NSString stringWithFormat:@"%@.preferences-changed", bundleIdentifier], NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
 /* }}} */
 #endif

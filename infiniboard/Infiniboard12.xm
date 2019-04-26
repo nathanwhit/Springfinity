@@ -215,12 +215,11 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
     BOOL scroll = IFPreferencesBoolForKey(IFPreferencesScrollEnabled);
-    logf("SCROLL ENABLED: %d", scroll);
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
     BOOL clips = IFPreferencesBoolForKey(IFPreferencesClipsToBounds);
-
+    logf("Clips : %d", clips);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -257,6 +256,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
 
 static void IFPreferencesApply() {
     log("Applying prefs");
+    IFPreferencesLoad();
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
     });
@@ -431,7 +431,6 @@ static IFIconListDimensions IFSizingDefaultDimensionsForIconList(SBIconListView 
 }
 
 static void IFIconListSizingSetInformationForIconList(IFIconListSizingInformation *information, SBIconListView *listView) {
-    log("Setting sizing info");
     [IFIconListSizingStore setObject:information forKey:[NSValue valueWithNonretainedObject:listView]];
 }
 
@@ -886,11 +885,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (void)setFrame:(CGRect)frame {
-    log("Setting frame.....");
     if (IFIconListIsValid(self)) {
         UIScrollView *scrollView = IFListsScrollViewForListView(self);
-        log("self was valid");
-        logf("Scrollview : %{public}@", scrollView);
 
         NSUInteger pagex = 0;
         NSUInteger pagey = 0;
@@ -924,10 +920,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (BOOL)shouldReparentView:(UIView*)view {
-    logf("Should reparent view : %{public}@", view);
-    logf("With parent : %{public}@", [view superview]);
     if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
-        log("Already owned");
         return NO;
     }
     else {
@@ -1485,7 +1478,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
 %ctor {
     log("CTOR");
     IFListsInitialize();
-    IFPreferencesInitialize(@"com.chpwn.infiniboard", IFPreferencesApply);
+    IFPreferencesInitialize(@"com.nwhit.infiniboard12prefs");
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)IFPreferencesApply, (CFStringRef)@"com.nwhit.infiniboard12prefs.preferences-changed", NULL, 0);
 
     dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib", RTLD_LAZY);
     [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"infiniboard"];
