@@ -152,4 +152,510 @@ typedef enum {
     #define IFPreferencesClipsToBounds @"ClipsToBounds", YES
 #endif
 
+// Utils
+
+static NSUInteger IFFlagExpandedFrame = 0;
+static NSUInteger IFFlagDefaultDimensions = 0;
+
+/* }}} */
+
+/* Conveniences {{{ */
+
+__attribute__((unused)) static NSUInteger IFMinimum(NSUInteger x, NSUInteger y) {
+    return (x < y ? x : y);
+}
+
+__attribute__((unused)) static NSUInteger IFMaximum(NSUInteger x, NSUInteger y) {
+    return (x > y ? x : y);
+}
+
+__attribute__((unused)) static SBIconController *IFIconControllerSharedInstance() {
+    return (SBIconController *) [NSClassFromString(@"SBIconController") sharedInstance];
+}
+
+__attribute__((unused)) static SBIconView *IFIconViewForIcon(SBIcon *icon) {
+    SBIconController *iconController = IFIconControllerSharedInstance();
+    if ([iconController respondsToSelector:@selector(homescreenIconViewMap)]) {
+        SBIconViewMap *iconViewMap = [iconController homescreenIconViewMap];
+        return [iconViewMap iconViewForIcon:icon];
+    } else {
+        SBIconViewMap *iconViewMap = [NSClassFromString(@"SBIconViewMap") homescreenMap];
+        return [iconViewMap iconViewForIcon:icon];
+    }
+}
+
+__attribute__((unused)) static BOOL IFIconListIsValid(SBIconListView *listView) {
+    return [listView isMemberOfClass:IFConfigurationListClassObject];
+}
+
+/* }}} */
+
+/* List Management {{{ */
+
+static NSMutableArray *IFListsListViews = nil;
+static NSMutableArray *IFListsScrollViews = nil;
+
+
+__attribute__((constructor)) static void IFListsInitialize() {
+    // Non-retaining mutable arrays, since we don't want to own these objects.
+    // IFListsListViews = [[NSMutableArray alloc] init];
+    // IFListsScrollViews =[[NSMutableArray alloc] init];
+    CFArrayCallBacks callbacks = { 0, NULL, NULL, CFCopyDescription, CFEqual };
+    IFListsListViews = (__bridge NSMutableArray*)CFArrayCreateMutable(NULL, 0, &callbacks);
+    IFListsScrollViews = (__bridge NSMutableArray*)CFArrayCreateMutable(NULL, 0, &callbacks);
+}
+
+__attribute__((unused)) static void IFListsIterateViews(void (^block)(SBIconListView *, UIScrollView *)) {
+    for (NSUInteger i = 0; i < IFMinimum([IFListsListViews count], [IFListsScrollViews count]); i++) {
+        block([IFListsListViews objectAtIndex:i], [IFListsScrollViews objectAtIndex:i]);
+    }
+}
+
+__attribute__((unused)) static SBIconListView *IFListsListViewForScrollView(UIScrollView *scrollView) {
+    NSInteger index = [IFListsScrollViews indexOfObject:scrollView];
+
+    if (index == NSNotFound) {
+        return nil;
+    }
+
+    return [IFListsListViews objectAtIndex:index];
+}
+
+__attribute__((unused)) static UIScrollView *IFListsScrollViewForListView(SBIconListView *listView) {
+    NSInteger index = [IFListsListViews indexOfObject:listView];
+
+    if (index == NSNotFound) {
+        return nil;
+    }
+
+    return [IFListsScrollViews objectAtIndex:index];
+}
+
+__attribute__((unused)) static void IFListsRegister(SBIconListView *listView, UIScrollView *scrollView) {
+    [IFListsListViews addObject:listView];
+    [IFListsScrollViews addObject:scrollView];
+}
+
+__attribute__((unused)) static void IFListsUnregister(SBIconListView *listView, UIScrollView *scrollView) {
+    [IFListsListViews removeObject:listView];
+    [IFListsScrollViews removeObject:scrollView];
+}
+__attribute__((unused)) static UIInterfaceOrientation IFIconListOrientation(SBIconListView *listView) {
+    UIInterfaceOrientation orientation = MSHookIvar<UIInterfaceOrientation>(listView, "_orientation");
+    return orientation;
+}
+
+__attribute__((unused)) static CGSize IFIconDefaultSize() {
+    CGSize size = [NSClassFromString(@"SBIconView") defaultIconSize];
+    return size;
+}
+
+__attribute__((unused)) static SBRootFolder *IFRootFolderSharedInstance() {
+    SBIconController *iconController = IFIconControllerSharedInstance();
+    SBRootFolder *rootFolder = [iconController rootFolder];
+    return rootFolder;
+}
+
+__attribute__((unused)) static NSUInteger IFIconListLastIconIndex(SBIconListView *listView) {
+    NSArray *icons = [listView icons];
+    SBIcon *lastIcon = nil;
+
+    for (SBIcon *icon in [icons reverseObjectEnumerator]) {
+        if ([icon respondsToSelector:@selector(isPlaceholder)] && ![icon isPlaceholder]) {
+            lastIcon = icon;
+            break;
+        } else if ([icon respondsToSelector:@selector(isNullIcon)] && ![icon isNullIcon]) {
+            lastIcon = icon;
+            break;
+        } else if ([icon respondsToSelector:@selector(isDestinationHole)] && ![icon isDestinationHole]) {
+            lastIcon = icon;
+            break;
+        }
+    }
+
+    SBIconListModel *model = [listView model];
+    return [model indexForIcon:lastIcon];
+}
+
+__attribute__((unused)) static SBIconListView *IFIconListContainingIcon(SBIcon *icon) {
+    SBIconController *iconController = IFIconControllerSharedInstance();
+    SBRootFolder *rootFolder = IFRootFolderSharedInstance();
+    NSArray* listModels = [[rootFolder listsContainingIcon:icon] allObjects];
+    SBIconListModel *listModel;
+    if ([listModels count] > 0) {
+        listModel = listModels[0];
+    }
+    if ([listModel isKindOfClass:NSClassFromString(@"SBDockIconListModel")]) {
+        if ([iconController respondsToSelector:@selector(dockListView)]) {
+            return [iconController dockListView];
+        } else {
+            return [iconController dock];
+        }
+    } else {
+        NSUInteger index = [rootFolder indexOfList:listModel];
+        return [iconController rootIconListAtIndex:index];
+    }
+}
+
+static void IFPreferencesApplyToList(SBIconListView *listView) {
+    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+
+    BOOL scroll = IFPreferencesBoolForKey(IFPreferencesScrollEnabled);
+    IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
+    IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
+    BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
+    BOOL clips = IFPreferencesBoolForKey(IFPreferencesClipsToBounds);
+    [scrollView setShowsVerticalScrollIndicator:YES];
+    [scrollView setShowsHorizontalScrollIndicator:YES];
+    if (bar == kIFScrollbarStyleBlack) {
+        [scrollView setIndicatorStyle:UIScrollViewIndicatorStyleBlack];
+    } else if (bar == kIFScrollbarStyleWhite) {
+        [scrollView setIndicatorStyle:UIScrollViewIndicatorStyleWhite];
+    } else if (bar == kIFScrollbarStyleNone) {
+        [scrollView setShowsVerticalScrollIndicator:NO];
+        [scrollView setShowsHorizontalScrollIndicator:NO];
+    }
+
+    [scrollView setAlwaysBounceVertical:IFConfigurationExpandVertically && (bounce == kIFScrollBounceEnabled)];
+    [scrollView setAlwaysBounceHorizontal:IFConfigurationExpandHorizontally && (bounce == kIFScrollBounceEnabled)];
+    [scrollView setBounces:(bounce != kIFScrollBounceDisabled)];
+
+    [scrollView setScrollEnabled:scroll];
+    [scrollView setPagingEnabled:page];
+    [scrollView setClipsToBounds:clips];
+    [listView setClipsToBounds:clips];
+
+    if (bounce == kIFScrollBounceExtra) {
+        NSUInteger idx = 0;
+        NSUInteger max = 0;
+
+        IFFlag(IFFlagDefaultDimensions) {
+            idx = IFIconListLastIconIndex(listView);
+            max = [listView iconRowsForCurrentOrientation] * [listView iconColumnsForCurrentOrientation];
+        }
+
+        [scrollView setAlwaysBounceVertical:IFConfigurationExpandVertically && (idx > max)];
+        [scrollView setAlwaysBounceHorizontal:IFConfigurationExpandHorizontally && (idx > max)];
+    }
+}
+
+static void IFPreferencesApply() {
+    IFPreferencesLoad();
+    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+        IFPreferencesApplyToList(listView);
+    });
+}
+
+/* }}} */
+
+/* List Sizing {{{ */
+
+typedef struct {
+    NSUInteger rows;
+    NSUInteger columns;
+} IFIconListDimensions;
+
+static IFIconListDimensions IFIconListDimensionsZero = { 0, 0 };
+
+/* Defaults {{{ */
+
+static IFIconListDimensions _IFSizingDefaultDimensionsForOrientation(UIInterfaceOrientation orientation) {
+    IFIconListDimensions dimensions = IFIconListDimensionsZero;
+
+    IFFlag(IFFlagDefaultDimensions) {
+        dimensions.rows = [IFConfigurationListClassObject iconRowsForInterfaceOrientation:orientation];
+        dimensions.columns = [IFConfigurationListClassObject iconColumnsForInterfaceOrientation:orientation];
+    }
+
+    return dimensions;
+}
+
+static IFIconListDimensions _IFSizingDefaultDimensions(SBIconListView *listView) {
+    return _IFSizingDefaultDimensionsForOrientation(IFIconListOrientation(listView));
+}
+
+static CGSize _IFSizingDefaultPadding(SBIconListView *listView) {
+    CGSize padding = CGSizeZero;
+
+    IFFlag(IFFlagDefaultDimensions) {
+        padding.width = [listView horizontalIconPadding];
+        padding.height = [listView verticalIconPadding];
+    }
+
+    return padding;
+}
+
+static UIEdgeInsets _IFSizingDefaultInsets(SBIconListView *listView) {
+    UIEdgeInsets insets = UIEdgeInsetsZero;
+
+    IFFlag(IFFlagDefaultDimensions) {
+        insets.top = [listView topIconInset];
+        insets.bottom = [listView bottomIconInset];
+        insets.left = [listView sideIconInset];
+        insets.right = [listView sideIconInset];
+    }
+
+    return insets;
+}
+
+/* }}} */
+
+/* Dimensions {{{ */
+
+static IFIconListDimensions IFSizingMaximumDimensionsForOrientation(UIInterfaceOrientation orientation) {
+    IFIconListDimensions dimensions = _IFSizingDefaultDimensionsForOrientation(orientation);
+
+    if (IFConfigurationExpandVertically) {
+        dimensions.rows = IFConfigurationExpandedDimension;
+    }
+
+    if (IFConfigurationExpandHorizontally) {
+        dimensions.columns = IFConfigurationExpandedDimension;
+    }
+
+    return dimensions;
+}
+
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, NSUInteger iconsToAdd) {
+    IFIconListDimensions dimensions = IFIconListDimensionsZero;
+    UIInterfaceOrientation orientation = IFIconListOrientation(listView);
+
+    if ([[listView icons] count] > 0) {
+        NSUInteger idx = IFIconListLastIconIndex(listView);
+
+        if (IFConfigurationExpandWhenEditing && [IFIconControllerSharedInstance() isEditing]) {
+            // Add room to drop the icon into.
+            idx += iconsToAdd;
+        }
+
+        IFIconListDimensions maximumDimensions = IFSizingMaximumDimensionsForOrientation(orientation);
+        dimensions.columns = (idx % maximumDimensions.columns);
+        dimensions.rows = (idx / maximumDimensions.columns);
+
+        // Convert from index to sizing information.
+        dimensions.rows += 1;
+        dimensions.columns += 1;
+
+        if (!IFConfigurationDynamicColumns) {
+            // If we have more than one row, we necessarily have the
+            // maximum number of columns at some point above the bottom.
+            dimensions.columns = maximumDimensions.columns;
+        }
+    } else {
+        dimensions = _IFSizingDefaultDimensionsForOrientation(orientation);
+    }
+
+    IFIconListDimensions defaultDimensions = _IFSizingDefaultDimensions(listView);
+
+    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        // This is ugly, but we need to round up here.
+        dimensions.rows = ceilf((float) dimensions.rows / (float) defaultDimensions.rows) * defaultDimensions.rows;
+        dimensions.columns = ceilf((float) dimensions.columns / (float) defaultDimensions.columns) * defaultDimensions.columns;
+    }
+
+    // Make sure we have at least the default number of icons.
+    dimensions.rows = (dimensions.rows > defaultDimensions.rows) ? dimensions.rows : defaultDimensions.rows;
+    dimensions.columns = (dimensions.columns > defaultDimensions.columns) ? dimensions.columns : defaultDimensions.columns;
+
+    return dimensions;
+}
+
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
+    return IFSizingContentDimensions(listView, 1);
+}
+
+/* }}} */
+
+/* Information {{{ */
+
+// Prevent conflicts between multiple users of Infinilist.
+#define IFIconListSizingInformation IFMacroConcat(IFIconListSizingInformation, IFConfigurationTweakIdentifier)
+
+@interface IFIconListSizingInformation : NSObject {
+    IFIconListDimensions defaultDimensions;
+    CGSize defaultPadding;
+    UIEdgeInsets defaultInsets;
+    IFIconListDimensions contentDimensions;
+}
+
+@property (nonatomic, assign) IFIconListDimensions defaultDimensions;
+@property (nonatomic, assign) CGSize defaultPadding;
+@property (nonatomic, assign) UIEdgeInsets defaultInsets;
+@property (nonatomic, assign) IFIconListDimensions contentDimensions;
+
+@end
+
+@implementation IFIconListSizingInformation
+
+@synthesize defaultDimensions;
+@synthesize defaultPadding;
+@synthesize defaultInsets;
+@synthesize contentDimensions;
+
+- (NSString *)description {
+    return [NSString stringWithFormat:@"<IFIconListSizingInformation:%p defaultDimensions = {%ld, %ld} defaultPadding = %@ defaultInsets = %@ contentDimensions = {%ld, %ld}>", self, (unsigned long)defaultDimensions.rows, (unsigned long)defaultDimensions.columns, NSStringFromCGSize(defaultPadding), NSStringFromUIEdgeInsets(defaultInsets), (unsigned long)contentDimensions.rows, (unsigned long)contentDimensions.columns];
+}
+
+@end
+
+static NSMutableDictionary *IFIconListSizingStore = nil;
+
+__attribute__((constructor)) static void IFIconListSizingInitialize() {
+    IFIconListSizingStore = [[NSMutableDictionary alloc] init];
+}
+
+static IFIconListSizingInformation *IFIconListSizingInformationForIconList(SBIconListView *listView) {
+    IFIconListSizingInformation *information = [IFIconListSizingStore objectForKey:[NSValue valueWithNonretainedObject:listView]];
+    return information;
+}
+
+static IFIconListDimensions IFSizingDefaultDimensionsForIconList(SBIconListView *listView) {
+    return [IFIconListSizingInformationForIconList(listView) defaultDimensions];
+}
+
+static void IFIconListSizingSetInformationForIconList(IFIconListSizingInformation *information, SBIconListView *listView) {
+    [IFIconListSizingStore setObject:information forKey:[NSValue valueWithNonretainedObject:listView]];
+}
+
+static void IFIconListSizingRemoveInformationForIconList(SBIconListView *listView) {
+    [IFIconListSizingStore removeObjectForKey:[NSValue valueWithNonretainedObject:listView]];
+}
+
+static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconList(SBIconListView *listView) {
+    IFIconListSizingInformation *info = [[IFIconListSizingInformation alloc] init];
+    [info setDefaultDimensions:_IFSizingDefaultDimensions(listView)];
+    [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
+    [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
+    [info setContentDimensions:IFSizingContentDimensions(listView)];
+    return info;
+}
+
+static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconList(SBIconListView *listView, NSUInteger iconsToAdd) {
+    IFIconListSizingInformation *info = [[IFIconListSizingInformation alloc] init];
+    [info setDefaultDimensions:_IFSizingDefaultDimensions(listView)];
+    [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
+    [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
+    [info setContentDimensions:IFSizingContentDimensions(listView, iconsToAdd)];
+    return info;
+}
+
+/* }}} */
+
+/* Content Size {{{ */
+
+static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
+    IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(listView);
+
+    IFIconListDimensions effectiveDimensions = [info contentDimensions];
+    CGSize contentSize = CGSizeZero;
+
+    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        IFIconListDimensions defaultDimensions = [info defaultDimensions];
+        CGSize size = [listView frame].size;
+
+        IFIconListDimensions result = IFIconListDimensionsZero;
+        result.columns = (effectiveDimensions.columns / defaultDimensions.columns);
+        result.rows = (effectiveDimensions.rows / defaultDimensions.rows);
+
+        contentSize = CGSizeMake(size.width * result.columns, size.height * result.rows);
+    } else {
+        CGSize padding = [info defaultPadding];
+        UIEdgeInsets insets = [info defaultInsets];
+        CGSize iconSize = IFIconDefaultSize();
+
+        contentSize.width = insets.left + effectiveDimensions.columns * (iconSize.width + padding.width) - padding.width + insets.right;
+        contentSize.height = insets.top + effectiveDimensions.rows * (iconSize.height + padding.height) - padding.height + insets.bottom;
+    }
+
+    return contentSize;
+}
+
+static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScrollView *scrollView) {
+    CGPoint offset = [scrollView contentOffset];
+    CGSize scrollSize = [scrollView bounds].size;
+    CGSize oldSize = [scrollView contentSize];
+    CGSize newSize = IFIconListSizingEffectiveContentSize(listView);
+
+
+    if (IFConfigurationExpandHorizontally) {
+        // Be sure not to have two-dimensional scrolling.
+        if (newSize.height > scrollSize.height) {
+            newSize.height = scrollSize.height;
+        }
+
+        // Make sure the content offset is never outside the scroll view.
+        if (offset.x + scrollSize.width > newSize.width) {
+            // But not if the scroll view is only a few columns.
+            if (newSize.width >= scrollSize.width) {
+                offset.x = newSize.width - scrollSize.width;
+            }
+        }
+    } else if (IFConfigurationExpandVertically) {
+        // Be sure not to have two-dimensional scrolling.
+        if (newSize.width > scrollSize.width) {
+            newSize.width = scrollSize.width;
+        }
+
+        // Make sure the content offset is never outside the scroll view.
+        if (offset.y + scrollSize.height > newSize.height) {
+            // But not if the scroll view is only a few rows.
+            if (newSize.height >= scrollSize.height) {
+                offset.y = newSize.height - scrollSize.height;
+            }
+        }
+    }
+
+    if (!CGSizeEqualToSize(oldSize, newSize)) {
+        [UIView animateWithDuration:0.3f animations:^{
+            [scrollView setContentSize:newSize];
+            [scrollView setContentOffset:offset animated:NO];
+        }];
+    }
+}
+
+/* }}} */
+
+static void IFIconListSizingUpdateIconList(SBIconListView *listView) {
+    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+
+    IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView), listView);
+    IFIconListSizingUpdateContentSize(listView, scrollView);
+}
+
+static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUInteger iconsToAdd) {
+    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+
+    IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView, iconsToAdd), listView);
+    IFIconListSizingUpdateContentSize(listView, scrollView);
+}
+
+/* }}} */
+
+/* Fixes and Restore Implementation {{{ */
+
+
+static void IFRestoreIconLists(void) {
+    IFPreferencesApply();
+
+    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+        if (IFPreferencesBoolForKey(IFPreferencesRestoreEnabled)) {
+            [scrollView setContentOffset:CGPointZero animated:YES];
+        }
+
+        if (IFPreferencesIntForKey(IFPreferencesScrollbarStyle) != kIFScrollbarStyleNone) {
+            [scrollView flashScrollIndicators];
+        }
+    });
+}
+
+static void IFFastRestoreIconLists(void) {
+    if (IFPreferencesBoolForKey(IFPreferencesFastRestoreEnabled)) {
+        IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+            [scrollView setContentOffset:CGPointZero animated:YES];
+        });
+    }
+}
+
+static NSUInteger IFFlagFolderOpening = 0;
+
 #endif
