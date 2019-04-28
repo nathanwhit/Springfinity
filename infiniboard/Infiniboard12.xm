@@ -1160,275 +1160,105 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
-// - (NSUInteger)columnAtPoint:(CGPoint)point {
-//     if (IFIconListIsValid(self)) {
-//         NSUInteger column = 0;
-
-//         IFFlag(IFFlagExpandedFrame) {
-//             UIScrollView *scrollView = IFListsScrollViewForListView(self);
-//             CGPoint offset = [scrollView contentOffset];
-//             CGSize size = [scrollView frame].size;
-
-//             if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-//                 column = %orig;
-
-//                 NSUInteger page = (offset.x / size.width);
-//                 IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
-//                 column += page * dimensions.columns;
-//             } else {
-//                 point.x += offset.x;
-//                 point.y += offset.y;
-
-//                 column = %orig;
-//             }
-//         }
-
-//         return column;
-//     } else {
-//         return %orig;
-//     }
-// }
-
-// - (struct CGPoint)_wallpaperRelativeIconCenterForIconView:(id)arg1 {
-//     log("wallpaperrelative");
-//     SBIconListView *listView = IFIconListContainingIcon((SBIcon*)[arg1 icon]);
-//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//     CGPoint ret = %orig;
-
-//     // The list could, in theory, be in another list that
-//     // we don't care about. If it is, we won't have a scroll
-//     // view for it, and can safely ignore moving the icon.
-//     if (scrollView != nil) {
-//         ret.x -= [scrollView contentOffset].x;
-//         ret.y -= [scrollView contentOffset].y;
-//     }
-
-//     return ret;
-// }
-
 /* }}} */
-/* }}} */
+
 
 %end
 
 /* Fixes {{{ */
 
-// %hook UIScrollView
-
-// FIXME: this is an ugly hack
-// static id grabbedIcon = nil;
-// - (void)setContentOffset:(CGPoint)offset {
-//     if (grabbedIcon != nil && [IFListsScrollViews containsObject:self]) {
-//         // Prevent weird auto-scrolling behavior while dragging icons.
-//         return;
-//     } else {
-//         %orig;
-//     }
-// }
-
-// %end
-
-%hook SBIconController
-
-// - (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
-//     SBIconListView *listView = IFIconListContainingIcon(icon);
-//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//     CGRect ret = %orig;
-
-//     // The list could, in theory, be in another list that
-//     // we don't care about. If it is, we won't have a scroll
-//     // view for it, and can safely ignore moving the icon.
-//     if (scrollView != nil) {
-//         ret.origin.x -= [scrollView contentOffset].x;
-//         ret.origin.y -= [scrollView contentOffset].y;
-//     }
-
-//     return ret;
-// }
-
-// - (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
-//     %orig;
-
-//     if (IFIconListIsValid(listView)) {
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-//         SBIconView *iconView = IFIconViewForIcon(icon);
-
-//         CGRect frame = [iconView frame];
-//         frame.origin.x += [scrollView contentOffset].x;
-//         frame.origin.y += [scrollView contentOffset].y;
-//         [iconView setFrame:frame];
-//     }
-// }
-
-// - (void)_dropIconIntoOpenFolder:(SBIcon *)icon withInsertionPath:(NSIndexPath *)path {
-//     %orig;
-
-//     SBFolderIconListView *listView = [self currentFolderIconList];
-
-//     if (IFIconListIsValid(listView)) {
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-//         SBIconView *iconView = IFIconViewForIcon(icon);
-
-//         CGRect frame = [iconView frame];
-//         frame.origin.x -= [scrollView contentOffset].x;
-//         frame.origin.y -= [scrollView contentOffset].y;
-//         [iconView setFrame:frame];
-//     }
-// }
-
-- (id)placeIcon:(id)icon atIndexPath:(id)arg2 options:(unsigned long long)arg3 {
-    log("Placing icon...");
-    id ret = %orig;
-    // grabbedIcon = nil;
-    SBFolderIconListView *listView = [self currentFolderIconList];
-
-    if (IFIconListIsValid(listView)) {
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        SBIconView *iconView = IFIconViewForIcon(icon);
-
-        CGRect frame = [iconView frame];
-        frame.origin.x -= [scrollView contentOffset].x;
-        frame.origin.y -= [scrollView contentOffset].y;
-        [iconView setFrame:frame];
+%hook SBIconView
+%property (nonatomic, assign) bool isBeingChecked;
+-(id)superview {
+    id view = %orig;
+    if (![self isBeingChecked]) {
+        return view;
     }
-    return ret;
+    else {
+        if ([view isKindOfClass:%c(IFInfiniboardScrollView)]) {
+            SBIconListView *listView = IFListsListViewForScrollView((UIScrollView*)view);
+            return listView;
+        }
+        else {
+            return view;
+        }
+    }
 }
 
-// - (void)folderController:(id)arg1 iconListView:(id)arg2 performIconDrop:(id)arg3 {
-    // logf("Performing icon drop with ... %{public}@", [[arg3 items][0] itemProvider]);
-    // %orig;
-// }
-
-// - (void)setGrabbedIcon:(id)icon {
-//     log("icon grabbed");
-//     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-//         [scrollView setScrollEnabled:(icon == nil)];
-//     });
-
-//     %orig;
-
-    // if (icon != nil) {
-    //     grabbedIcon = icon;
-    // } else {
-    //     dispatch_async(dispatch_get_main_queue(), ^{
-    //         grabbedIcon = nil;
-    //     });
-    // }
-// }
-
-// - (void)setIsEditing:(BOOL)editing {
-//     log("is editing");
-//     %orig;
-
-//     dispatch_async(dispatch_get_main_queue(), ^{
-//         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-//             IFIconListSizingUpdateIconList(listView);
-//         });
-//     });
-// }
-
-- (void)_moveIconViewToContentView:(id)arg1 {
-    %orig;
-    // logf("Moving icon view to content view ... %{public}@", arg1);
+-(CGPoint)center {
+    id view = [self superview];
+    CGPoint scrolledCenter = %orig;
+    if ([self isBeingChecked] && [view isKindOfClass:%c(SBRootIconListView)]) {
+        IFInfiniboardScrollView *infiniboardView = (IFInfiniboardScrollView*)IFListsScrollViewForListView((SBIconListView*)view);
+        scrolledCenter.y -= [infiniboardView contentOffset].y;
+        logf("Iconview : %{public}@", self);
+        [self setIsBeingChecked:false];
+    }
+    return scrolledCenter;
 }
 
 %end
 
+%hook SBIconListViewDraggingAppPolicyHandler
+static bool dropping = false;
+-(id)dropInteraction:(id)arg1 previewForDroppingItem:(id)dropItem withDefault:(id)arg3 {
+    // id view = [self _iconViewForDragItem:dropItem];
+    // SBIconView *iconView = nil;
+    // if ([view isKindOfClass:%c(SBIconView)]) {
+    //     iconView = (SBIconView*)view;
+    // }
+    // [iconView setIsBeingChecked:true];
+    dropping = true;
+    id o = %orig;
+
+    // [iconView setIsBeingChecked:false];
+    // logf("Returned : %{public}@ For drop interaction : %{public}@ preview for item : %{public}@ with default : %{public}@", o, arg1, dropItem, arg3);
+    return o;
+
+}
+-(id)_iconViewForDragItem:(id)item {
+    id view = %orig;
+    if (dropping) {
+        SBIconView *iconView = nil;
+        if ([view isKindOfClass:%c(SBIconView)]) {
+            iconView = (SBIconView*)view;
+        }
+        [iconView setIsBeingChecked:true];
+        SBIconListView *listView = IFIconListContainingIcon([iconView icon]);
+        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+        [scrollView setScrollEnabled:NO];
+        // dropping = false;
+    }
+    return view;
+}
+%end
 
 %hook SBIconDragManager
-- (void)performIconDrop:(id)arg1 identifier:(id)arg2 draggedIconIdentifiers:(id)arg3 inIconListView:(id)arg4 {
-        log("Dropping icons...");
-        %orig;
-        if (IFIconListIsValid(arg4)) {
-            // SBIconListView *listView = (SBIconListView*)arg4;
-            // UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-            // NSMutableArray *icons = [self draggedIconsForIdentifiers:arg3];
-            // for (int i = 0; i < [icons count]; i++) {
-            //     SBIconView *iconView = IFIconViewForIcon(icons[i]);
-            //     CGRect frame = [iconView frame];
-            //     frame.origin.x += [scrollView contentOffset].x;
-            //     frame.origin.y += [scrollView contentOffset].y;
-            //     [iconView setFrame:frame];
-            // }
-            dispatch_async(dispatch_get_main_queue(), ^{
-                IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-                    IFIconListSizingUpdateIconListForDrop(listView, [arg3 count]);
-                });
-            });
+-(void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
+    dropping = false;
+    // This fix (disabling scrolling while the icon drop animation completes) is not ideal, but I'm not sure else how to get around this at the moment
+    if (IFIconListIsValid(listView)) {
+        if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
+            UIScrollView *scrollView = IFListsScrollViewForListView(listView);
+            [scrollView setScrollEnabled:YES];
+            IFIconListSizingUpdateIconList(listView);
+        }
     }
+    %orig;
 }
-// - (void)moveIconFromWindow:(SBIcon *)icon toIconList:(SBIconListView *)listView {
-//     %orig;
-
-//     if (IFIconListIsValid(listView)) {
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-//         SBIconView *iconView = IFIconViewForIcon(icon);
-
-//         CGRect frame = [iconView frame];
-//         frame.origin.x += [scrollView contentOffset].x;
-//         frame.origin.y += [scrollView contentOffset].y;
-//         [iconView setFrame:frame];
-//     }
-// }
+-(void)concludeIconDrop:(id)drop {
+    dropping = false;
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
+        IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+            [scrollView setScrollEnabled:YES];
+            IFIconListSizingUpdateIconList(listView);
+        });
+    }
+    %orig;
+}
 %end
 
-// %hook SBIconDragContext
-// - (void)setGrabbedIconViews:(id)iconViews {
-//     %orig;
-//     log("Adding grabbed icon views...");
-//     for (int i = 0; i < [iconViews count]; i++) {
-
-//     }
-// }
-// - (void)addSourceIcon:(id)icon {
-//     %orig;
-//     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-//         [scrollView setScrollEnabled:(icon == nil)];
-//     });
-
-//     // %orig;
-
-//     if (icon != nil) {
-//         grabbedIcon = icon;
-//     } else {
-//         dispatch_async(dispatch_get_main_queue(), ^{
-//             grabbedIcon = nil;
-//         });
-//     }
-// }
-// - (void)addDropAnimatingDragItem:(id)arg1 {
-//     %orig;
-//     logf("Adding drop animating drag item...%{public}@", arg1);
-// }
-// - (void)setState:(NSUInteger)state {
-//     if (state == 5) {
-//         dispatch_async(dispatch_get_main_queue(), ^{
-//             grabbedIcon = nil;
-//         });
-//     }
-//     %orig;
-//     logf("Setting state... %d", (unsigned int)state);
-// }
-
-// - (void)setDestinationFolderIconView:(id)arg1 forIconWithIdentifier:(id)arg2 {
-
-// }
-
-// %end
-
-/* }}} */
-
-// %hook SBIconScrollView
-// - (void)setContentOffset:(struct CGPoint)arg1 animated:(_Bool)arg2 {
-//     %orig;
-//     log("Setting content offset...");
-// }
-// %end
-
 %end
-
 
 
 /* Custom Scroll View {{{ */

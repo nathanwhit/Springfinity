@@ -49,6 +49,10 @@ typedef struct SBIconCoordinate {
 - (id)draggedIconsForIdentifiers:(id)arg;
 @end
 
+@interface SBIconListViewDraggingAppPolicyHandler
+- (id)_iconViewForDragItem:(id)arg1;
+@end
+
 @class SBFolder;
 @interface SBFolderIcon : SBIcon
 - (SBFolder *)folder;
@@ -84,7 +88,7 @@ typedef struct SBIconCoordinate {
 @end
 
 @interface SBIconView : UIView
-@property (nonatomic, assign) bool addedToScrollView;
+@property (nonatomic, assign) bool isBeingChecked;
 + (CGSize)defaultIconSize; // iOS 5.0+
 - (SBIcon *)icon;
 @end
