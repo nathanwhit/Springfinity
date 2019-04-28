@@ -32,7 +32,7 @@
 #include <os/log.h>
 #include "InspCWrapper.m"
 #define log(str) os_log(OS_LOG_DEFAULT, str)
-#define logf(fmt, str) os_log(OS_LOG_DEFAULT, fmt, str)
+#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
 
 #define IFConfigurationTweakIdentifier Infiniboard
 #define IFConfigurationListClass SBIconListView
