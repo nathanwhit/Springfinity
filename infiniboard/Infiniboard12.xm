@@ -556,7 +556,7 @@ static void IFRestoreIconLists(void) {
 
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         if (IFPreferencesBoolForKey(IFPreferencesRestoreEnabled)) {
-            [scrollView setContentOffset:CGPointZero animated:NO];
+            [scrollView setContentOffset:CGPointZero animated:YES];
         }
 
         if (IFPreferencesIntForKey(IFPreferencesScrollbarStyle) != kIFScrollbarStyleNone) {
@@ -568,7 +568,7 @@ static void IFRestoreIconLists(void) {
 static void IFFastRestoreIconLists(void) {
     if (IFPreferencesBoolForKey(IFPreferencesFastRestoreEnabled)) {
         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-            [scrollView setContentOffset:CGPointZero animated:NO];
+            [scrollView setContentOffset:CGPointZero animated:YES];
         });
     }
 }
