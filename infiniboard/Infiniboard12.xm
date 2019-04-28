@@ -85,7 +85,6 @@ __attribute__((unused)) static SBIconController *IFIconControllerSharedInstance(
 __attribute__((unused)) static SBIconView *IFIconViewForIcon(SBIcon *icon) {
     SBIconController *iconController = IFIconControllerSharedInstance();
     if ([iconController respondsToSelector:@selector(homescreenIconViewMap)]) {
-        log("homescreeniconviewmap");
         SBIconViewMap *iconViewMap = [iconController homescreenIconViewMap];
         return [iconViewMap iconViewForIcon:icon];
     } else {
@@ -116,7 +115,6 @@ __attribute__((constructor)) static void IFListsInitialize() {
 }
 
 __attribute__((unused)) static void IFListsIterateViews(void (^block)(SBIconListView *, UIScrollView *)) {
-    log("Iterating views...");
     for (NSUInteger i = 0; i < IFMinimum([IFListsListViews count], [IFListsScrollViews count]); i++) {
         block([IFListsListViews objectAtIndex:i], [IFListsScrollViews objectAtIndex:i]);
     }
@@ -143,9 +141,6 @@ __attribute__((unused)) static UIScrollView *IFListsScrollViewForListView(SBIcon
 }
 
 __attribute__((unused)) static void IFListsRegister(SBIconListView *listView, UIScrollView *scrollView) {
-    log("registering views...");
-    logf("%{public}@", listView);
-    logf("%{public}@", scrollView);
     [IFListsListViews addObject:listView];
     [IFListsScrollViews addObject:scrollView];
 }
@@ -219,7 +214,6 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
     BOOL clips = IFPreferencesBoolForKey(IFPreferencesClipsToBounds);
-    logf("Clips : %d", clips);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -255,7 +249,6 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
 }
 
 static void IFPreferencesApply() {
-    log("Applying prefs");
     IFPreferencesLoad();
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
@@ -417,7 +410,6 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) 
 static NSMutableDictionary *IFIconListSizingStore = nil;
 
 __attribute__((constructor)) static void IFIconListSizingInitialize() {
-    log("Initializing IFIconListSizingStore...");
     IFIconListSizingStore = [[NSMutableDictionary alloc] init];
 }
 
@@ -666,74 +658,6 @@ static NSUInteger IFFlagFolderOpening = 0;
     }
 }
 
-
-// - (id)openFolder {
-//     log("here");
-//     id f = %orig;
-//     SBFolder *folder;
-//     if ([f isKindOfClass:%c(SBFolder)]) {
-//         folder = (SBFolder*)f;
-//     }
-
-//     if (folder != nil) {
-//         SBIcon *folderIcon = [[self openFolder] icon];
-
-//         SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//         if (scrollView != nil) {
-//             // We have a scroll view, so this is a list we care about.
-//             SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-//             [scrollView scrollRectToVisible:[folderIconView frame] animated:NO];
-//         } else {
-//             // Get last icon on current page; scroll that icon to visible.
-//             // (This fixes visual issues when icons are partially scrolled
-//             // between rows and a folder is opened when it's in the dock.)
-//             CGPoint point = CGPointMake(0, [listView bounds].size.height);
-//             SBIcon *lastIcon = [listView iconAtPoint:point index:NULL];
-//             SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
-
-//             if (lastIconView != nil) {
-//                 [scrollView scrollRectToVisible:[lastIconView frame] animated:NO];
-//             }
-//         }
-//     }
-//     return f;
-// }
-
-// - (CGRect)_contentViewRelativeFrameForIcon:(SBIcon *)icon {
-//     log("CONTENTVIEW HOOKED");
-//     SBIconListView *listView = IFIconListContainingIcon(icon);
-//     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//     if (IFIconListIsValid(listView) && IFFlagFolderOpening && IFPreferencesBoolForKey(IFPreferencesClipsToBounds)) {
-//         SBIconView *iconView = IFIconViewForIcon(icon);
-//         CGRect iconRect = [iconView frame];
-
-//         CGRect scrollVisibleFrame = [scrollView frame];
-//         scrollVisibleFrame.origin = [scrollView contentOffset];
-
-//         if (CGRectIntersectsRect(iconRect, scrollVisibleFrame)) {
-//             return %orig;
-//         } else {
-//             CGRect frame = %orig;
-//             return CGRectMake(-1000, -1000, frame.size.width, frame.size.height);
-//         }
-//     } else {
-//         return %orig;
-//     }
-// }
-
-// - (void)openFolder:(SBFolder *)folder animated:(BOOL)animated fromSwitcher:(BOOL)fromSwitcher {
-//     log("HERE");
-//     // Let -iconAtPoint: know that it can slide SpringBoard "upwards" if necessary.
-//     IFFlag(IFFlagFolderOpening) {
-//         IFFlag(IFFlagDefaultDimensions) {
-//             %orig;
-//         }
-//     }
-// }
-
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     %orig;
     IFFastRestoreIconLists();
@@ -823,18 +747,16 @@ static void IFIconListInitialize(SBIconListView *listView) {
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
     [scrollView setContentInsetAdjustmentBehavior: UIScrollViewContentInsetAdjustmentAlways];
-    [scrollView setSafeAreaInsets:UIEdgeInsetsMake(7, -2, 0, 0)];
+    [scrollView setSafeAreaInsets:UIEdgeInsetsZero];
 
     IFListsRegister(listView, scrollView);
     [listView addSubview:scrollView];
-    // [scrollView addSubview: listView];
 
     IFIconListSizingUpdateIconList(listView);
     IFPreferencesApplyToList(listView);
 }
 
 %group IFBasic
-
 %hook SBIconListView
 
 /* View Hierarchy {{{ */
@@ -1064,73 +986,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
-// - (CGRect)bounds {
-//     if (IFIconListIsValid(self)) {
-//         // This check breaks icon positions on iOS 7.0+, but is needed on iOS 5.x and 6.x.
-//         if (kCFCoreFoundationVersionNumber < 800.0 && IFFlagExpandedFrame) {
-//             CGRect bounds = %orig;
-//             bounds.size = IFIconListSizingEffectiveContentSize(self);
-//             return bounds;
-//         } else {
-//             return %orig;
-//         }
-//     } else {
-//         return %orig;
-//     }
-// }
-
-/* }}} */
-
-/* Positioning {{{ */
-
-// static CGPoint IFIconListOriginForIconAtXY(SBIconListView *self, NSUInteger x, NSUInteger y, CGPoint (^orig)(NSUInteger, NSUInteger)) {
-//     CGPoint origin = CGPointZero;
-
-//     IFFlag(IFFlagExpandedFrame) {
-//         UIScrollView *scrollView = IFListsScrollViewForListView(self);
-
-//         if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-//             IFIconListDimensions dimensions = IFSizingDefaultDimensionsForIconList(self);
-
-//             NSUInteger px = (x / dimensions.columns), py = (y / dimensions.rows);
-//             NSUInteger ix = (x % dimensions.columns), iy = (y % dimensions.rows);
-
-//             origin = orig(ix, iy);
-
-//             CGSize size = [scrollView frame].size;
-//             origin.x += (size.width) * px;
-//             origin.y += (size.height) * py;
-//         } else {
-//             origin = orig(x, y);
-//         }
-//     }
-
-//     return origin;
-// }
-
-// - (CGPoint)originForIconAtCoordinate:(struct SBIconCoordinate)coordinate {
-//     log("origin for icon at coordinate");
-//     if (IFIconListIsValid(self)) {
-//         return IFIconListOriginForIconAtXY(self, coordinate.col - 1, coordinate.row - 1, ^(NSUInteger x, NSUInteger y) {
-//             SBIconCoordinate innerCoordinate = { .row = y + 1, .col = x + 1 };
-//             return %orig(innerCoordinate);
-//         });
-//     } else {
-//         return %orig;
-//     }
-// }
-
-// - (CGPoint)originForIconAtX:(NSUInteger)x Y:(NSUInteger)y {
-//     log("originforiconatxy");
-//     if (IFIconListIsValid(self)) {
-//         return IFIconListOriginForIconAtXY(self, x, y, ^(NSUInteger x, NSUInteger y) {
-//             return %orig(x, y);
-//         });
-//     } else {
-//         return %orig;
-//     }
-// }
-
 - (NSUInteger)rowAtPoint:(CGPoint)point {
     if (IFIconListIsValid(self)) {
         NSUInteger row = 0;
@@ -1191,7 +1046,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
     if ([self isBeingChecked] && [view isKindOfClass:%c(SBRootIconListView)]) {
         IFInfiniboardScrollView *infiniboardView = (IFInfiniboardScrollView*)IFListsScrollViewForListView((SBIconListView*)view);
         scrolledCenter.y -= [infiniboardView contentOffset].y;
-        logf("Iconview : %{public}@", self);
         [self setIsBeingChecked:false];
     }
     return scrolledCenter;
@@ -1202,18 +1056,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
 %hook SBIconListViewDraggingAppPolicyHandler
 static bool dropping = false;
 -(id)dropInteraction:(id)arg1 previewForDroppingItem:(id)dropItem withDefault:(id)arg3 {
-    // id view = [self _iconViewForDragItem:dropItem];
-    // SBIconView *iconView = nil;
-    // if ([view isKindOfClass:%c(SBIconView)]) {
-    //     iconView = (SBIconView*)view;
-    // }
-    // [iconView setIsBeingChecked:true];
     dropping = true;
-    id o = %orig;
-
-    // [iconView setIsBeingChecked:false];
-    // logf("Returned : %{public}@ For drop interaction : %{public}@ preview for item : %{public}@ with default : %{public}@", o, arg1, dropItem, arg3);
-    return o;
+    return %orig;
 
 }
 -(id)_iconViewForDragItem:(id)item {
@@ -1227,7 +1071,6 @@ static bool dropping = false;
         SBIconListView *listView = IFIconListContainingIcon([iconView icon]);
         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
         [scrollView setScrollEnabled:NO];
-        // dropping = false;
     }
     return view;
 }
@@ -1283,7 +1126,6 @@ static bool dropping = false;
 }
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
-    log("gesture recognizer began");
     // Allow accessing Spotlight when scrolled to the top on iOS 7.0+.
     if (%c(SBSearchScrollView) != nil) {
         if (gestureRecognizer == [self panGestureRecognizer]) {
@@ -1306,7 +1148,6 @@ static bool dropping = false;
 /* Constructor {{{ */
 
 %ctor {
-    log("CTOR");
     IFListsInitialize();
     IFPreferencesInitialize(@"com.nwhit.infiniboard12prefs");
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)IFPreferencesApply, (CFStringRef)@"com.nwhit.infiniboard12prefs.preferences-changed", NULL, 0);
