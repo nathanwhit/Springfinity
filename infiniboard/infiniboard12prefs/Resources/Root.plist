@@ -93,8 +93,8 @@
 			<string>FastRestoreEnabled</string>
 			<key>label</key>
 			<string>Top on Paging</string>
-	<!-- 		<key>PostNotification</key>
-			<string>com.nwhit.infiniboard12.preferences-changed</string> -->
+			<key>PostNotification</key>
+			<string>com.nwhit.infiniboard12prefs.preferences-changed</string>
 			<key>defaults</key>
 			<string>com.nwhit.infiniboard12prefs</string>
 		</dict>
@@ -122,7 +122,7 @@
 			<key>label</key>
 			<string>Vertical Paging</string>
 			<key>PostNotification</key>
-			<string>com.nwhit.infiniboard12.preferences-changed</string>
+			<string>com.nwhit.infiniboard12prefs.preferences-changed</string>
 			<key>defaults</key>
 			<string>com.nwhit.infiniboard12prefs</string>
 		</dict>
