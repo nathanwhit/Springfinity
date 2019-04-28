@@ -852,19 +852,23 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 
 - (void)addSubview:(UIView *)view {
-    // if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
-    //     return;
-    // }
     static SBIconListView *lastListView;
     static UIScrollView *lastScrollView;
-    // logf("adding subview : %{public}@", view);
-    // logf("With parent : %{public}@", [view superview]);
-    // if (![view isHidden] && IFIconListIsValid(self) && ![[view superview] isKindOfClass:%c(SBRecycledViewsContainer)]) {
+    static __weak SBIconListView *formerLastListView;
+    static __weak UIScrollView *formerLastScrollView;
     if (IFIconListIsValid(self)) {
         if (lastListView != self) {
-            log("List view wasn't the same as the last");
-            lastListView = self;
-            lastScrollView = IFListsScrollViewForListView(self);
+            if (formerLastListView == self) {
+                lastListView = formerLastListView;
+                lastScrollView = formerLastScrollView;
+            }
+            else {
+                formerLastListView = lastListView;
+                formerLastScrollView = lastScrollView;
+                lastListView = self;
+                lastScrollView = IFListsScrollViewForListView(self);
+            }
+            
         }
 
         if (view == lastScrollView) {
@@ -872,17 +876,10 @@ static void IFIconListInitialize(SBIconListView *listView) {
         } 
         else {
             [lastScrollView addSubview:view];
-                // if ([view isKindOfClass:%c(SBIconView)]) {
-                    // CGRect frame = [view frame];
-                    IFIconListSizingUpdateIconList(self);
-                    // frame.origin.x += [lastScrollView contentOffset].x;
-                    // frame.origin.y += [lastScrollView contentOffset].y;
-                    // [view setFrame:frame];
-                // }
+            // IFIconListSizingUpdateIconList(self);
         }
-        } 
-
-        else {
+    } 
+    else {
         %orig;
     }
 }
