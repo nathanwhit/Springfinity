@@ -31,7 +31,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = Infiniboard12
 Infiniboard12_FILES = Infiniboard12.xm
 Infiniboard12_FRAMEWORKS = UIKit CoreGraphics QuartzCore CoreTelephony
-Infiniboard12_CFLAGS += -fobjc-arc
+Infiniboard12_CFLAGS += -fobjc-arc -Wno-unused-function -Wno-unused-variable
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
