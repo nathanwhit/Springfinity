@@ -1148,11 +1148,6 @@ static bool dropping = false;
     IFListsInitialize();
     IFPreferencesInitialize(@"com.nwhit.infiniboard12prefs");
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)IFPreferencesApply, (CFStringRef)@"com.nwhit.infiniboard12prefs.preferences-changed", NULL, 0);
-
-    dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib", RTLD_LAZY);
-    [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"infiniboard"];
-
-
     %init(IFInfiniboard);
     %init(IFBasic);
 }
