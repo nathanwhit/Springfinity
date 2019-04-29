@@ -132,7 +132,21 @@
 			<key>default</key>
 			<true/>
 			<key>key</key>
-			<string>ClipsToBounds</string>
+			<string>ClipsStatusbar</string>
+			<key>label</key>
+			<string>Hide Behind Statusbar</string>
+			<key>PostNotification</key>
+			<string>com.nwhit.infiniboard12prefs.preferences-changed</string>
+			<key>defaults</key>
+			<string>com.nwhit.infiniboard12prefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>key</key>
+			<string>ClipsDock</string>
 			<key>label</key>
 			<string>Hide Behind Dock</string>
 			<key>PostNotification</key>

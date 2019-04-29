@@ -239,8 +239,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
     UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView frame]];
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
-    [scrollView setContentInsetAdjustmentBehavior: UIScrollViewContentInsetAdjustmentAlways];
-    [scrollView setSafeAreaInsets:UIEdgeInsetsZero];
 
     IFListsRegister(listView, scrollView);
     [listView addSubview:scrollView];
@@ -587,23 +585,6 @@ static bool dropping = false;
 /* Custom Scroll View {{{ */
 
 @implementation IFInfiniboardScrollView
-
-- (void)setContentOffset:(CGPoint)offset {
-    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-        if (offset.y <= 2) {
-            offset.y = -[self adjustedContentInset].top;
-        }
-    }
-    
-    [super setContentOffset:offset];
-}
-
-- (void)setSafeAreaInsets:(UIEdgeInsets)insets {
-    insets.top = 7;
-    insets.bottom = -1.95;
-    [super setSafeAreaInsets:insets];
-    [self safeAreaInsetsDidChange];
-}
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     // Allow accessing Spotlight when scrolled to the top on iOS 7.0+.

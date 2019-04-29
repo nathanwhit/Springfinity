@@ -47,6 +47,11 @@
 
 /* }}} */
 
+@interface SBDockView : UIView
++(CGFloat)defaultHeight;
++(CGFloat)defaultHeightPadding;
+@end
+
 /* Configuration Macros {{{ */
 
 #define IFMacroQuote_(x) #x
@@ -148,9 +153,15 @@ typedef enum {
     #define IFPreferencesScrollbarStyle @"ScrollbarStyle", kIFScrollbarStyleBlack
 #endif
 
-#ifndef IFPreferencesClipsToBounds
-    #define IFPreferencesClipsToBounds @"ClipsToBounds", YES
+#ifndef IFPreferencesClipsStatusbar
+    #define IFPreferencesClipsStatusbar @"ClipsStatusbar", YES
 #endif
+
+#ifndef IFPreferencesClipsDock
+    #define IFPreferencesClipsDock @"ClipsDock", YES
+#endif
+
+#define DefaultStatusbarHeight 20
 
 // Utils
 
@@ -304,7 +315,8 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
-    BOOL clips = IFPreferencesBoolForKey(IFPreferencesClipsToBounds);
+    BOOL clipsStatusbar = IFPreferencesBoolForKey(IFPreferencesClipsStatusbar);
+    BOOL clipsDock = IFPreferencesBoolForKey(IFPreferencesClipsDock);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -322,8 +334,40 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
 
     [scrollView setScrollEnabled:scroll];
     [scrollView setPagingEnabled:page];
-    [scrollView setClipsToBounds:clips];
-    [listView setClipsToBounds:clips];
+
+    [scrollView setClipsToBounds:NO];
+    [listView setClipsToBounds:NO];
+
+    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat dockMaskHeight = 0;
+    CGFloat dockMaskPadding = 0;
+    CGFloat maskYOffset = DefaultStatusbarHeight;
+    CGFloat adjustmentAmount = 0;
+    CGFloat bottomScrollInset = 0;
+    if (clipsStatusbar) {
+        maskYOffset = (DefaultStatusbarHeight/5)-1;
+        bottomScrollInset = -5.5;
+    }
+
+    if (clipsDock) {
+        Class dockClass = NSClassFromString(@"SBDockView");
+        dockMaskHeight = [dockClass defaultHeight];
+        logf("Dock height : %.2f", dockMaskHeight);
+        dockMaskPadding = [dockClass defaultHeightPadding];
+        logf("Dock padding : %.2f", dockMaskPadding); 
+        if (maskYOffset==DefaultStatusbarHeight) {
+            adjustmentAmount = DefaultStatusbarHeight;
+        }
+    }
+
+
+    CALayer *maskLayer = [CALayer layer];
+        maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding));
+        maskLayer.backgroundColor = [UIColor blackColor].CGColor;
+        [scrollView layer].mask = maskLayer;
+        [listView layer].mask = maskLayer;
+
+        [scrollView setContentInset:UIEdgeInsetsMake(0,0,bottomScrollInset,0)];
 
     if (bounce == kIFScrollBounceExtra) {
         NSUInteger idx = 0;
