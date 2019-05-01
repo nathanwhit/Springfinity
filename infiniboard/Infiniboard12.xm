@@ -516,8 +516,10 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 /* Fixes {{{ */
 
+static __weak SBIconView *recipientIcon;
+
 %hook SBIconView
-%property (nonatomic, assign) bool isBeingChecked;
+%property (nonatomic, assign, getter=isBeingChecked) bool beingChecked;
 -(id)superview {
     id view = %orig;
     if (![self isBeingChecked]) {
@@ -526,7 +528,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
     else {
         if ([view isKindOfClass:%c(IFInfiniboardScrollView)]) {
             SBIconListView *listView = IFListsListViewForScrollView((UIScrollView*)view);
-            [self setIsBeingChecked:false];
+            [self setBeingChecked:false];
             return listView;
         }
         else {
@@ -551,15 +553,27 @@ static bool dropping = false;
         if ([view isKindOfClass:%c(SBIconView)]) {
             iconView = (SBIconView*)view;
         }
-        [iconView setIsBeingChecked:true];
+        [iconView setBeingChecked:true];
         dropping = false;
     }
     return view;
 }
 %end
 
+%hook SBIconDragContext
+- (void)setDestinationFolderIconView:(id)arg1 forIconWithIdentifier:(id)arg2 {
+    logf("adding destination : %{public}@ for identifier : %{public}@", arg1, arg2);
+    if (arg1 != nil)
+    {
+        droppingDown = true;
+        recipientIcon = arg1;
+    }
+    %orig;
+}
+%end
 %hook SBIconDragManager
 - (void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
+    recipientIcon = nil;
     if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
         IFIconListSizingUpdateIconList(listView);
     }
@@ -570,14 +584,19 @@ static bool dropping = false;
 
 %hook UIDragPreviewTarget
 - (id)initWithContainer:(UIView*)view center:(CGPoint)targetCenter transform:(CGAffineTransform)arg {
+    logf("Initializing view : %{public}@ center : %{public}@", view, NSStringFromCGPoint(targetCenter));
     if ([view isMemberOfClass:IFConfigurationListClassObject]) {
         UIScrollView *scrollView = IFListsScrollViewForListView((SBIconListView*)view);
-        if (scrollView) {
-            return %orig(scrollView, targetCenter, arg);
+        if (recipientIcon) {
+            targetCenter = recipientIcon.center;
         }
+        return %orig(scrollView, targetCenter, arg);
     }
     return %orig;
 }
+%end
+}
+%end
 %end
 
 

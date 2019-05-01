@@ -88,7 +88,7 @@ typedef struct SBIconCoordinate {
 @end
 
 @interface SBIconView : UIView
-@property (nonatomic, assign) bool isBeingChecked;
+@property (nonatomic, assign, getter=isBeingChecked) bool beingChecked;
 + (CGSize)defaultIconSize; // iOS 5.0+
 - (SBIcon *)icon;
 @end
