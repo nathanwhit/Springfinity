@@ -565,7 +565,6 @@ static bool dropping = false;
     logf("adding destination : %{public}@ for identifier : %{public}@", arg1, arg2);
     if (arg1 != nil)
     {
-        droppingDown = true;
         recipientIcon = arg1;
     }
     %orig;
@@ -593,8 +592,6 @@ static bool dropping = false;
         return %orig(scrollView, targetCenter, arg);
     }
     return %orig;
-}
-%end
 }
 %end
 %end
