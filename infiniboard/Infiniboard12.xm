@@ -505,6 +505,12 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 /* }}} */
 
+-(BOOL)allowsAddingIconCount:(NSUInteger)count {
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
+        return YES;
+    }
+    return %orig;
+}
 
 %end
 
@@ -520,6 +526,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
     else {
         if ([view isKindOfClass:%c(IFInfiniboardScrollView)]) {
             SBIconListView *listView = IFListsListViewForScrollView((UIScrollView*)view);
+            [self setIsBeingChecked:false];
             return listView;
         }
         else {
@@ -528,20 +535,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
--(CGPoint)center {
-    id view = [self superview];
-    CGPoint scrolledCenter = %orig;
-    if ([self isBeingChecked] && [view isKindOfClass:%c(SBRootIconListView)]) {
-        IFInfiniboardScrollView *infiniboardView = (IFInfiniboardScrollView*)IFListsScrollViewForListView((SBIconListView*)view);
-        scrolledCenter.y -= [infiniboardView contentOffset].y;
-        [self setIsBeingChecked:false];
-    }
-    return scrolledCenter;
-}
-
 %end
-
-static __weak UIScrollView *frozenScrollView = nil;
 
 %hook SBIconListViewDraggingAppPolicyHandler
 static bool dropping = false;
@@ -558,27 +552,32 @@ static bool dropping = false;
             iconView = (SBIconView*)view;
         }
         [iconView setIsBeingChecked:true];
-        SBIconListView *listView = IFIconListContainingIcon([iconView icon]);
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        [scrollView setScrollEnabled:NO];
-        frozenScrollView = scrollView;
+        dropping = false;
     }
     return view;
 }
 %end
 
 %hook SBIconDragManager
--(void)concludeIconDrop:(id)drop {
-    // This fix (disabling scrolling while the icon drop animation completes) is not ideal, but I'm not sure else how to get around this at the moment
-    dropping = false;
-    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
-        [frozenScrollView setScrollEnabled:YES];
-        frozenScrollView = nil;
+- (void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
+        IFIconListSizingUpdateIconList(listView);
     }
     %orig;
+
 }
 %end
 
+%hook UIDragPreviewTarget
+- (id)initWithContainer:(UIView*)view center:(CGPoint)targetCenter transform:(CGAffineTransform)arg {
+    if ([view isMemberOfClass:IFConfigurationListClassObject]) {
+        UIScrollView *scrollView = IFListsScrollViewForListView((SBIconListView*)view);
+        if (scrollView) {
+            return %orig(scrollView, targetCenter, arg);
+        }
+    }
+    return %orig;
+}
 %end
 
 

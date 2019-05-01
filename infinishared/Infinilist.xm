@@ -352,9 +352,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     if (clipsDock) {
         Class dockClass = NSClassFromString(@"SBDockView");
         dockMaskHeight = [dockClass defaultHeight];
-        logf("Dock height : %.2f", dockMaskHeight);
         dockMaskPadding = [dockClass defaultHeightPadding];
-        logf("Dock padding : %.2f", dockMaskPadding); 
         if (maskYOffset==DefaultStatusbarHeight) {
             adjustmentAmount = DefaultStatusbarHeight;
         }
