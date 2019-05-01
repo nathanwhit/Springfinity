@@ -5,6 +5,7 @@ Package: com.nwhit.infiniboard12
 Section: Tweaks
 Pre-Depends: firmware (>= 11.0)
 Depends: mobilesubstrate
+Suggests: com.chpwn.iconsupport
 Version: 3.1-b
 Architecture: iphoneos-arm
 Description: A revival of infiniboard for iOS 11 & 12. Vertically scroll on your homescreen.
