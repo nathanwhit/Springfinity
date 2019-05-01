@@ -62,7 +62,7 @@
 /* }}} */
 
 %group IFInfiniboard
-%hook SBIconListView
+%hook SBRootIconListView
 
 - (NSUInteger)rowForIcon:(SBIcon *)icon {
     SBIconView *iconView = IFIconViewForIcon(icon);
@@ -96,35 +96,6 @@
 %end
 
 %hook SBIconController
-
-// - (void)_setOpenFolder:(SBFolder *)folder {
-//     log("here");
-//     %orig;
-
-//     if (folder != nil) {
-//         SBIcon *folderIcon = [[self openFolder] icon];
-
-//         SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//         if (scrollView != nil) {
-//             // We have a scroll view, so this is a list we care about.
-//             SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-//             [scrollView scrollRectToVisible:[folderIconView frame] animated:NO];
-//         } else {
-//             // Get last icon on current page; scroll that icon to visible.
-//             // (This fixes visual issues when icons are partially scrolled
-//             // between rows and a folder is opened when it's in the dock.)
-//             CGPoint point = CGPointMake(0, [listView bounds].size.height);
-//             SBIcon *lastIcon = [listView iconAtPoint:point index:NULL];
-//             SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
-
-//             if (lastIconView != nil) {
-//                 [scrollView scrollRectToVisible:[lastIconView frame] animated:NO];
-//             }
-//         }
-//     }
-// }
 
 - (void)openFolderIcon:(id)arg1 animated:(_Bool)arg2 withCompletion:(id)arg3 {
     %orig;
@@ -278,8 +249,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
 - (id)initWithModel:(id)arg1 orientation:(NSUInteger)arg2 viewMap:(id)arg3 {
     id ret = %orig;
     if (self == ret) {
-        if (IFIconListIsValid(self)) {
-            IFIconListInitialize(self);
+        if (IFIconListIsValid(ret)  && ![self isKindOfClass:%c(SBDockIconListView)]) {
+            IFIconListInitialize(ret);
         }
     }
     return ret;
@@ -583,11 +554,10 @@ static bool dropping = false;
 
 %hook UIDragPreviewTarget
 - (id)initWithContainer:(UIView*)view center:(CGPoint)targetCenter transform:(CGAffineTransform)arg {
-    logf("Initializing view : %{public}@ center : %{public}@", view, NSStringFromCGPoint(targetCenter));
     if ([view isMemberOfClass:IFConfigurationListClassObject]) {
         UIScrollView *scrollView = IFListsScrollViewForListView((SBIconListView*)view);
         if (recipientIcon) {
-            targetCenter = recipientIcon.center;
+            return %orig;
         }
         return %orig(scrollView, targetCenter, arg);
     }
