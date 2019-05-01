@@ -1,4 +1,4 @@
-Author: nwhit <nathan.whitaker01@gmail.com>
+Author: Nathan Whitaker <nathan.whitaker01@gmail.com>
 Maintainer: Nathan Whitaker
 Name: Infiniboard12
 Package: com.nwhit.infiniboard12
@@ -11,4 +11,4 @@ Architecture: iphoneos-arm
 Description: A revival of infiniboard for iOS 11 & 12. Vertically scroll on your homescreen.
 Icon: file:///Library/PreferenceLoader/Preferences/Infiniboard.png
 Tag: cydia::commercial
-dev: nwhit
+dev: Nathan Whitaker

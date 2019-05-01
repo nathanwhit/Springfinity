@@ -23,7 +23,7 @@
 
 
 export TARGET = :clang:11.2:12.0
-export ARCHS = arm64
+export ARCHS = arm64 arm64e
 export COPYFILE_DISABLE = 1
 
 include $(THEOS)/makefiles/common.mk
