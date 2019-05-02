@@ -547,12 +547,17 @@ static bool dropping = false;
 %end
 %hook SBIconDragManager
 - (void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
-    recipientIcon = nil;
-    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
-        IFIconListSizingUpdateIconList(listView);
-    }
     %orig;
-
+    recipientIcon = nil;
+    // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            IFIconListSizingUpdateIconList(listView);
+        });
+    }
+    [self compactAndLayoutRootIconLists];
+    // [listView compactAndLayoutFol]
+    // });
 }
 %end
 

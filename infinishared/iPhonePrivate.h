@@ -47,6 +47,7 @@ typedef struct SBIconCoordinate {
 
 @interface SBIconDragManager
 - (id)draggedIconsForIdentifiers:(id)arg;
+- (void)compactAndLayoutRootIconLists;
 @end
 
 @interface SBIconListViewDraggingAppPolicyHandler
