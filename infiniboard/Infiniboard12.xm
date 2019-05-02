@@ -568,6 +568,29 @@ static bool dropping = false;
     return %orig;
 }
 %end
+
+%hook SBIconListViewDraggingDestinationDelegate
+
+- (id)targetItemForSpringLoadingInteractionInView:(id)arg1 atLocation:(CGPoint)arg2 forDropSession:(id)arg3 {
+    if ([arg1 isMemberOfClass:IFConfigurationListClassObject]) {
+        [self updateSpringLoadedPolicyHandlerForDropSession:arg3];
+        SBIcon *newIcon = [arg1 iconAtPoint:arg2 index:nil];
+        SBIconView *newTarget = [[arg1 viewMap] mappedIconViewForIcon:newIcon];
+        return newTarget;
+    }
+    return %orig;
+}
+%end
+
+%hook SBRootIconListView
+- (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
+    NSUInteger row = [self rowAtPoint:arg1]+1;
+    NSUInteger col = [self columnAtPoint:arg1]+1;
+    NSUInteger numCols = [self iconColumnsForCurrentOrientation];
+    NSUInteger index = ((row-1) * numCols) + col - 1;
+    return [[self model] iconAtIndex: index];
+}
+%end
 %end
 
 

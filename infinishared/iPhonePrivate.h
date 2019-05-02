@@ -67,6 +67,7 @@ typedef struct SBIconCoordinate {
 
 @interface SBIconListModel : NSObject
 - (NSUInteger)indexForIcon:(SBIcon *)icon;
+- (id)iconAtIndex:(NSUInteger)arg1;
 @end
 
 @interface SBFolder : NSObject
@@ -96,6 +97,7 @@ typedef struct SBIconCoordinate {
 @interface SBIconViewMap : NSObject
 + (SBIconViewMap *)homescreenMap;
 - (SBIconView *)iconViewForIcon:(SBIcon *)icon;
+- (SBIconView*)mappedIconViewForIcon:(SBIcon*)icon;
 @end
 
 @interface SBIconListView : UIView
@@ -130,6 +132,8 @@ typedef struct SBIconCoordinate {
 - (void)cleanupAfterRotation;
 
 - (void)layoutIconsNow;
+
+-(SBIconViewMap*)viewMap;
 @end
 
 @interface SBRootIconListView : SBIconListView
@@ -144,6 +148,10 @@ typedef struct SBIconCoordinate {
 - (CGPoint)_wallpaperRelativeIconCenterForIconView:(SBIconView *)iconView; // iOS 7.0+
 
 - (void)_updateForOrientation:(UIInterfaceOrientation)orientation duration:(NSTimeInterval)interval;
+@end
+
+@interface SBIconListViewDraggingDestinationDelegate
+- (BOOL)updateSpringLoadedPolicyHandlerForDropSession:(id)arg1;
 @end
 
 @interface SBIconController : NSObject
