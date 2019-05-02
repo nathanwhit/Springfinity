@@ -487,28 +487,33 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 /* Fixes {{{ */
 
-static __weak SBIconView *recipientIcon;
+static void IFSetSuperviewImp(IMP implem);
 
-%hook SBIconView
-%property (nonatomic, assign, getter=isBeingChecked) bool beingChecked;
--(id)superview {
-    id view = %orig;
-    if (![self isBeingChecked]) {
-        return view;
+UIView *(*realSuperview)(id self, SEL _cmd);
+
+UIView *fakeSuperview(id self, SEL _cmd) {
+    UIView *view = (*realSuperview)(self, _cmd);
+    if ([view isKindOfClass:[IFInfiniboardScrollView class]]) {
+        IFSetSuperviewImp((IMP)*realSuperview);
+        return IFListsListViewForScrollView((UIScrollView*)view);
     }
-    else {
-        if ([view isKindOfClass:%c(IFInfiniboardScrollView)]) {
-            SBIconListView *listView = IFListsListViewForScrollView((UIScrollView*)view);
-            [self setBeingChecked:false];
-            return listView;
-        }
-        else {
-            return view;
-        }
-    }
+    return view;
 }
 
-%end
+static __weak SBIconView *recipientIcon;
+
+UIView *(*oldSuperview)(id self, SEL _cmd);
+
+static void IFSetSuperviewImp(IMP implem) {
+    static dispatch_once_t lookupIconViewClassToken;
+    static Class iconViewClass;
+
+    dispatch_once(&lookupIconViewClassToken, ^{
+        iconViewClass = %c(SBIconView);
+        MSHookMessageEx(iconViewClass, @selector(superview), (IMP)&fakeSuperview, (IMP*)&realSuperview);
+    });
+    MSHookMessageEx(iconViewClass, @selector(superview), implem, NULL);
+}
 
 %hook SBIconListViewDraggingAppPolicyHandler
 static bool dropping = false;
@@ -524,7 +529,7 @@ static bool dropping = false;
         if ([view isKindOfClass:%c(SBIconView)]) {
             iconView = (SBIconView*)view;
         }
-        [iconView setBeingChecked:true];
+        IFSetSuperviewImp((IMP)&fakeSuperview);
         dropping = false;
     }
     return view;
@@ -532,11 +537,10 @@ static bool dropping = false;
 %end
 
 %hook SBIconDragContext
-- (void)setDestinationFolderIconView:(id)arg1 forIconWithIdentifier:(id)arg2 {
-    logf("adding destination : %{public}@ for identifier : %{public}@", arg1, arg2);
-    if (arg1 != nil)
+- (void)setDestinationFolderIconView:(id)destination forIconWithIdentifier:(id)arg2 {
+    if (destination)
     {
-        recipientIcon = arg1;
+        recipientIcon = destination;
     }
     %orig;
 }
