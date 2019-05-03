@@ -36,11 +36,11 @@
 
 /* Preferences {{{ */
 static NSDictionary *preferences = nil;
-static NSString *identifier = nil;
+static NSString *identifier;
 
 
 __attribute__((unused)) static void IFPreferencesLoad() {
-    preferences = [[NSDictionary alloc] initWithContentsOfFile:[NSString stringWithFormat:@"/User/Library/Preferences/%@.plist", BUNDLEID]];
+    preferences = [[NSDictionary alloc] initWithContentsOfFile:[NSString stringWithFormat:@"/User/Library/Preferences/%@.plist", identifier]];
 }
 
 __attribute__((unused)) static BOOL IFPreferencesBoolForKey(NSString *key, BOOL def) {
