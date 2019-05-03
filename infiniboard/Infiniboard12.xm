@@ -31,8 +31,6 @@
 
 #include <os/log.h>
 #include "InspCWrapper.m"
-#define log(str) os_log(OS_LOG_DEFAULT, str)
-#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
 
 #define IFConfigurationTweakIdentifier Infiniboard
 #define IFConfigurationListClass SBIconListView
@@ -106,7 +104,7 @@
         if (scrollView != nil) {
             // We have a scroll view, so this is a list we care about.
             SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-            [scrollView scrollRectToVisible:[folderIconView frame] animated:NO];
+            [scrollView scrollRectToVisible:[folderIconView frame] animated:YES];
         } else {
             // Get last icon on current page; scroll that icon to visible.
             // (This fixes visual issues when icons are partially scrolled
@@ -116,15 +114,10 @@
             SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
 
             if (lastIconView != nil) {
-                [scrollView scrollRectToVisible:[lastIconView frame] animated:NO];
+                [scrollView scrollRectToVisible:[lastIconView frame] animated:YES];
             }
         }
     }
-}
-
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
-    %orig;
-    IFFastRestoreIconLists();
 }
 
 %end
@@ -134,70 +127,6 @@
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     %orig;
     IFFastRestoreIconLists();
-}
-
-%end
-
-%hook SBUIController
-
-- (void)restoreIconList:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated animateWallpaper:(BOOL)animateWallpaper {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated animateWallpaper:(BOOL)wallpaper keepSwitcher:(BOOL)switcher {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated delay:(NSTimeInterval)delay {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated delay:(NSTimeInterval)delay animateWallpaper:(BOOL)wallpaper keepSwitcher:(BOOL)switcher {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimatedIfNeeded:(BOOL)needed animateWallpaper:(BOOL)wallpaper {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContent {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentAndUnscatterIconsAnimated:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentAndUnscatterIconsAnimated:(BOOL)animated withCompletion:(id)completion {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentUpdatingStatusBar:(BOOL)updateStatusBar {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListForSuspendGesture {
-    %orig;
-    IFRestoreIconLists();
 }
 
 %end
@@ -228,17 +157,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
     if (self == ret) {
         // Avoid hooking a sub-initializer when we hook the base initializer, but otherwise do hook it.
         if (IFIconListIsValid(self) && ![self isKindOfClass:%c(SBDockIconListView)]) {
-            IFIconListInitialize(self);
-        }
-    }
-
-    return ret;
-}
-
-- (id)initWithFrame:(CGRect)frame viewMap:(id)viewMap {
-    id ret = %orig;
-    if (self == ret) {
-        if (IFIconListIsValid(self)) {
             IFIconListInitialize(self);
         }
     }

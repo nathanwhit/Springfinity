@@ -45,9 +45,6 @@
 #include "Preferences.h"
 // #include "iPhonePrivate.h"
 
-#define log(str) os_log(OS_LOG_DEFAULT, str)
-#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
-
 /* }}} */
 
 @interface SBDockView : UIView
@@ -56,6 +53,12 @@
 @end
 
 /* Configuration Macros {{{ */
+
+#ifndef LOG_MACROS
+#define LOG_MACROS
+#define log(str) os_log(OS_LOG_DEFAULT, str)
+#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
+#endif
 
 #define IFMacroQuote_(x) #x
 #define IFMacroQuote(x) IFMacroQuote_(x)
@@ -373,7 +376,6 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
                 SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
                 if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
                     CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
-                    logf("Default pc frame : %{public}@", NSStringFromCGRect(pageControlFrame));
                     adjustmentAmount = -pageControlFrame.size.height*0.6;
                     bottomScrollInset *= 1.1;
                 }
