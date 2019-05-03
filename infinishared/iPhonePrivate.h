@@ -155,7 +155,22 @@ typedef struct SBIconCoordinate {
 - (BOOL)updateSpringLoadedPolicyHandlerForDropSession:(id)arg1;
 @end
 
+@interface SBFolderView : UIView
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView; // iOS 7.0+
+@end
+
+@interface SBFolderContainerView : UIView
+- (SBFolderView*)folderView;
+@end
+
+@interface SBIconContentView : UIView
+- (SBFolderContainerView*)childFolderContainerView;
+
+@end
+
 @interface SBIconController : NSObject
+
+- (SBIconContentView*)contentView;
 + (SBIconController *)sharedInstance;
 
 @property (nonatomic, readonly) SBIconViewMap *homescreenIconViewMap; // iOS 9.3+
@@ -206,11 +221,8 @@ typedef struct SBIconCoordinate {
 @interface SBSearchScrollView : UIScrollView // iOS 7.0+
 @end
 
-@interface SBFolderView : UIView
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView; // iOS 7.0+
-@end
-
 @interface SBRootFolderView : SBFolderView // ??
+- (CGRect)effectivePageControlFrame;
 @end
 
 @interface SBUIController : NSObject

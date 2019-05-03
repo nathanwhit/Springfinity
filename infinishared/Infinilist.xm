@@ -137,6 +137,12 @@ typedef enum {
     kIFScrollBounceDisabled
 } IFScrollBounce;
 
+typedef enum {
+    kIFHideDock,
+    kIFHideDockPC,
+    kIFNoHideDock
+} IFDockHiding;
+
 #ifndef IFPreferencesPagingEnabled
     #define IFPreferencesPagingEnabled @"PagingEnabled", NO
 #endif
@@ -158,10 +164,12 @@ typedef enum {
 #endif
 
 #ifndef IFPreferencesClipsDock
-    #define IFPreferencesClipsDock @"ClipsDock", YES
+    #define IFPreferencesClipsDock @"ClipsDock", kIFHideDock
 #endif
 
 #define DefaultStatusbarHeight 20
+
+#define DefaultPageControlHeight 37
 
 // Utils
 
@@ -316,7 +324,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
     BOOL clipsStatusbar = IFPreferencesBoolForKey(IFPreferencesClipsStatusbar);
-    BOOL clipsDock = IFPreferencesBoolForKey(IFPreferencesClipsDock);
+    IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -349,18 +357,28 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
         bottomScrollInset = -5.5;
     }
 
-    if (clipsDock) {
+    if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
         Class dockClass = NSClassFromString(@"SBDockView");
         dockMaskHeight = [dockClass defaultHeight];
         dockMaskPadding = [dockClass defaultHeightPadding];
-        if (maskYOffset==DefaultStatusbarHeight) {
-            adjustmentAmount = DefaultStatusbarHeight;
+        if (hidesDock == kIFHideDockPC) {
+            SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+            if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
+                CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                logf("Default pc frame : %{public}@", NSStringFromCGRect(pageControlFrame));
+                adjustmentAmount = -pageControlFrame.size.height*0.6;
+                bottomScrollInset *= 1.1;
+            }
+            else {
+                adjustmentAmount = -DefaultPageControlHeight*0.6;
+                bottomScrollInset *= 1.1;
+            }
         }
     }
 
 
     CALayer *maskLayer = [CALayer layer];
-        maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding));
+        maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
         maskLayer.backgroundColor = [UIColor blackColor].CGColor;
         [scrollView layer].mask = maskLayer;
         [listView layer].mask = maskLayer;
