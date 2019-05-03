@@ -40,10 +40,13 @@
 #include <dlfcn.h>
 #include <objc/runtime.h>
 
-// #include <substrate.h>
+#include <substrate.h>
 
 #include "Preferences.h"
 // #include "iPhonePrivate.h"
+
+#define log(str) os_log(OS_LOG_DEFAULT, str)
+#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
 
 /* }}} */
 
@@ -207,6 +210,10 @@ __attribute__((unused)) static BOOL IFIconListIsValid(SBIconListView *listView) 
     return [listView isMemberOfClass:IFConfigurationListClassObject];
 }
 
+__attribute__((unused)) static BOOL IFDockIconListIsValid(SBIconListView *listView) {
+    return [listView isKindOfClass:IFConfigurationListClassObject];
+}
+
 /* }}} */
 
 /* List Management {{{ */
@@ -343,47 +350,49 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     [scrollView setScrollEnabled:scroll];
     [scrollView setPagingEnabled:page];
 
-    [scrollView setClipsToBounds:NO];
-    [listView setClipsToBounds:NO];
+    if (![listView isKindOfClass:NSClassFromString(@"SBDockIconListView")]) {
+        [scrollView setClipsToBounds:NO];
+        [listView setClipsToBounds:NO];
 
-    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
-    CGFloat dockMaskHeight = 0;
-    CGFloat dockMaskPadding = 0;
-    CGFloat maskYOffset = DefaultStatusbarHeight;
-    CGFloat adjustmentAmount = 0;
-    CGFloat bottomScrollInset = 0;
-    if (clipsStatusbar) {
-        maskYOffset = (DefaultStatusbarHeight/5)-1;
-        bottomScrollInset = -5.5;
-    }
+        CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+        CGFloat dockMaskHeight = 0;
+        CGFloat dockMaskPadding = 0;
+        CGFloat maskYOffset = DefaultStatusbarHeight;
+        CGFloat adjustmentAmount = 0;
+        CGFloat bottomScrollInset = 0;
+        if (clipsStatusbar) {
+            maskYOffset = (DefaultStatusbarHeight/5)-1;
+            bottomScrollInset = -5.5;
+        }
 
-    if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
-        Class dockClass = NSClassFromString(@"SBDockView");
-        dockMaskHeight = [dockClass defaultHeight];
-        dockMaskPadding = [dockClass defaultHeightPadding];
-        if (hidesDock == kIFHideDockPC) {
-            SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
-            if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
-                CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
-                logf("Default pc frame : %{public}@", NSStringFromCGRect(pageControlFrame));
-                adjustmentAmount = -pageControlFrame.size.height*0.6;
-                bottomScrollInset *= 1.1;
-            }
-            else {
-                adjustmentAmount = -DefaultPageControlHeight*0.6;
-                bottomScrollInset *= 1.1;
+        if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
+            Class dockClass = NSClassFromString(@"SBDockView");
+            dockMaskHeight = [dockClass defaultHeight];
+            dockMaskPadding = [dockClass defaultHeightPadding];
+            if (hidesDock == kIFHideDockPC) {
+                SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
+                    CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                    logf("Default pc frame : %{public}@", NSStringFromCGRect(pageControlFrame));
+                    adjustmentAmount = -pageControlFrame.size.height*0.6;
+                    bottomScrollInset *= 1.1;
+                }
+                else {
+                    adjustmentAmount = -DefaultPageControlHeight*0.6;
+                    bottomScrollInset *= 1.1;
+                }
             }
         }
-    }
 
 
-    CALayer *maskLayer = [CALayer layer];
+        CALayer *maskLayer = [CALayer layer];
         maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
         maskLayer.backgroundColor = [UIColor blackColor].CGColor;
         [scrollView layer].mask = maskLayer;
         [listView layer].mask = maskLayer;
 
         [scrollView setContentInset:UIEdgeInsetsMake(0,0,bottomScrollInset,0)];
+    }
 
     if (bounce == kIFScrollBounceExtra) {
         NSUInteger idx = 0;
@@ -668,7 +677,7 @@ static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScroll
     if (!CGSizeEqualToSize(oldSize, newSize)) {
         [UIView animateWithDuration:0.3f animations:^{
             [scrollView setContentSize:newSize];
-            [scrollView setContentOffset:offset animated:NO];
+            [scrollView setContentOffset:offset animated:YES];
         }];
     }
 }
@@ -694,6 +703,7 @@ static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUI
 /* Fixes and Restore Implementation {{{ */
 
 
+#ifdef IFPreferencesRestoreEnabled
 static void IFRestoreIconLists(void) {
     IFPreferencesApply();
 
@@ -707,7 +717,9 @@ static void IFRestoreIconLists(void) {
         }
     });
 }
+#endif
 
+#ifdef IFPreferencesFastRestoreEnabled
 static void IFFastRestoreIconLists(void) {
     if (IFPreferencesBoolForKey(IFPreferencesFastRestoreEnabled)) {
         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
@@ -715,6 +727,7 @@ static void IFFastRestoreIconLists(void) {
         });
     }
 }
+#endif
 
 static NSUInteger IFFlagFolderOpening = 0;
 
