@@ -45,6 +45,8 @@
 #include "Preferences.h"
 // #include "iPhonePrivate.h"
 
+#include <deque>
+
 /* }}} */
 
 @interface SBDockView : UIView
@@ -181,6 +183,48 @@ typedef enum {
 
 static NSUInteger IFFlagExpandedFrame = 0;
 static NSUInteger IFFlagDefaultDimensions = 0;
+
+static void printSubviews(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
+    std::deque<UIView*> viewQueue;
+    std::deque<long> levelSizeQueue;
+    viewQueue.push_back(v);
+    long n = 1;
+    log("PARENT");
+    while (!viewQueue.empty()) {
+        UIView *vw = viewQueue.front();
+        viewQueue.pop_front();
+        if (n <= 0) {
+            log("------------");
+            n = levelSizeQueue.front();
+            levelSizeQueue.pop_front();
+        }
+        n--;
+
+        logf("View : %{public}@", vw);
+        if ([vw isKindOfClass:lowestClass]) {
+            continue;
+        }
+        long numSubs = 0;
+        for (UIView *sv in vw.subviews) {
+            if (![sv isKindOfClass:excludedClass]) {
+                viewQueue.push_back(sv);
+                numSubs++;
+            }
+        }
+        if (numSubs > 0) {
+            levelSizeQueue.push_back([vw.subviews count]);
+        }
+
+    }
+}
+
+static void printViewHierarchy(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
+    UIView *vw = v;
+    while (vw.superview) {
+        vw = vw.superview;
+    }
+    printSubviews(vw, lowestClass, excludedClass);
+}
 
 /* }}} */
 
