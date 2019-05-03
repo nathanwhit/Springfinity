@@ -514,6 +514,18 @@ static bool dropping = false;
     return [[self model] iconAtIndex: index];
 }
 %end
+
+%hook SBIconController
+- (void)_performInitialLayoutWithOrientation:(NSInteger)orient {
+    %orig;
+    IFPreferencesLoad();
+    IFDockHiding dockHide = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
+    if (dockHide == kIFHideDock || dockHide == kIFHideDockPC) {
+        IFSetDockHiding(YES);
+    }
+}
+%end
+
 %end
 
 

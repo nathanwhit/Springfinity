@@ -326,6 +326,38 @@ __attribute__((unused)) static SBIconListView *IFIconListContainingIcon(SBIcon *
     }
 }
 
+static void IFSetDockHiding(BOOL hide);
+
+void (*originalDockZOrdering)(id self, SEL _cmd);
+
+void alteredDockZOrdering(id self, SEL _cmd) {
+    SBDockView *dock = [self dockView];
+    [dock.superview bringSubviewToFront:dock];
+}
+
+static void IFSetDockHiding(BOOL hide) {
+    static Class rootFolderViewClass;
+    static __weak SBFolderView *folder; 
+    static dispatch_once_t dockHidingSetupToken;
+    dispatch_once(&dockHidingSetupToken, ^{
+        rootFolderViewClass = NSClassFromString(@"SBRootFolderView");
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)&alteredDockZOrdering, (IMP*)&originalDockZOrdering);
+    });
+    
+    if (!folder) {
+        folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+    }
+    if (hide) {
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)&alteredDockZOrdering, NULL);
+    }
+    else {
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)*originalDockZOrdering, NULL);
+    }
+    if ([folder isKindOfClass:rootFolderViewClass] && [folder respondsToSelector:@selector(_updateDockViewZOrdering)]) {
+        [(SBRootFolderView*)folder _updateDockViewZOrdering];
+    }
+}
+
 static void IFPreferencesApplyToList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
@@ -365,25 +397,29 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
         CGFloat bottomScrollInset = 0;
         if (clipsStatusbar) {
             maskYOffset = (DefaultStatusbarHeight/5)-1;
-            bottomScrollInset = -5.5;
+            // bottomScrollInset = -5.5;
         }
 
         if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
+            IFSetDockHiding(YES);
             Class dockClass = NSClassFromString(@"SBDockView");
-            dockMaskHeight = [dockClass defaultHeight];
-            dockMaskPadding = [dockClass defaultHeightPadding];
             if (hidesDock == kIFHideDockPC) {
                 SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+                dockMaskHeight = [dockClass defaultHeight];
+                dockMaskPadding = [dockClass defaultHeightPadding];
                 if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
                     CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
                     adjustmentAmount = -pageControlFrame.size.height*0.6;
-                    bottomScrollInset *= 1.1;
+                    // bottomScrollInset *= 1.1;
                 }
                 else {
                     adjustmentAmount = -DefaultPageControlHeight*0.6;
-                    bottomScrollInset *= 1.1;
+                    // bottomScrollInset *= 1.1;
                 }
             }
+        }
+        else {
+            IFSetDockHiding(NO);
         }
 
 
@@ -393,7 +429,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
         [scrollView layer].mask = maskLayer;
         [listView layer].mask = maskLayer;
 
-        [scrollView setContentInset:UIEdgeInsetsMake(0,0,bottomScrollInset,0)];
+        // [scrollView setContentInset:UIEdgeInsetsMake(2,0,bottomScrollInset,0)];
     }
 
     if (bounce == kIFScrollBounceExtra) {
