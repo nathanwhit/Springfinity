@@ -33,7 +33,7 @@
 #include "InspCWrapper.m"
 
 #define IFConfigurationTweakIdentifier Infiniboard
-#define IFConfigurationListClass SBIconListView
+#define IFConfigurationListClass SBRootIconListView
 #define IFConfigurationListClassObject (%c(SBRootIconListView) ?: %c(SBIconListView))
 #define IFConfigurationScrollViewClass IFInfiniboardScrollView
 // #define IFConfigurationFullPages (dlopen("/Library/MobileSubstrate/DynamicLibraries/Iconoclasm.dylib", RTLD_LAZY) != NULL)
