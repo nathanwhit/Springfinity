@@ -201,9 +201,11 @@ static void printSubviews(UIView *v, Class lowestClass = Nil, Class excludedClas
         UIView *vw = viewQueue.front();
         viewQueue.pop_front();
         if (n <= 0) {
-            log("------------");
+            log("-----------------------");
             n = levelSizeQueue.front();
             levelSizeQueue.pop_front();
+            logf("SUBVIEWS OF : %{public}@", vw.superview);
+            log("---");
         }
         n--;
 
