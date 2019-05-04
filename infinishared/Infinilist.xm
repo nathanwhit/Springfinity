@@ -151,6 +151,12 @@ typedef enum {
     kIFNoHideDock
 } IFDockHiding;
 
+typedef enum {
+    kIFFullHideSB,
+    kIFPartialHideSB,
+    kIFNoHideSB
+} IFSBHiding;
+
 #ifndef IFPreferencesPagingEnabled
     #define IFPreferencesPagingEnabled @"PagingEnabled", NO
 #endif
@@ -168,7 +174,7 @@ typedef enum {
 #endif
 
 #ifndef IFPreferencesClipsStatusbar
-    #define IFPreferencesClipsStatusbar @"ClipsStatusbar", YES
+    #define IFPreferencesClipsStatusbar @"ClipsStatusbar", kIFPartialHideSB
 #endif
 
 #ifndef IFPreferencesClipsDock
@@ -183,6 +189,7 @@ typedef enum {
 
 static NSUInteger IFFlagExpandedFrame = 0;
 static NSUInteger IFFlagDefaultDimensions = 0;
+static IFSBHiding hideSB = kIFPartialHideSB;
 
 static void printSubviews(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
     std::deque<UIView*> viewQueue;
@@ -409,7 +416,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
-    BOOL clipsStatusbar = IFPreferencesBoolForKey(IFPreferencesClipsStatusbar);
+    IFSBHiding clipsStatusbar = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
     IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
@@ -439,7 +446,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
         CGFloat maskYOffset = DefaultStatusbarHeight;
         CGFloat adjustmentAmount = 0;
         CGFloat bottomScrollInset = 0;
-        if (clipsStatusbar) {
+        if (clipsStatusbar == kIFFullHideSB) {
             maskYOffset = (DefaultStatusbarHeight/5)-1;
             // bottomScrollInset = -5.5;
         }
@@ -495,6 +502,8 @@ static void IFPreferencesApply() {
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
     });
+    hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
+
 }
 
 /* }}} */

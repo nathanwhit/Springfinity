@@ -526,8 +526,32 @@ static bool dropping = false;
 }
 %end
 
+%hook SBRootIconListView
+%new
+- (void)scrollViewDidScroll:(UIScrollView*)scrollView {
+    if ([scrollView isKindOfClass: [IFInfiniboardScrollView class]] && hideSB == kIFPartialHideSB) {
+        CGPoint velocity = [scrollView.panGestureRecognizer velocityInView:scrollView];
+        CGPoint offset = scrollView.contentOffset;
+        static dispatch_once_t statusBarFind;
+        static UIView *statusBar;
+        dispatch_once(&statusBarFind, ^{
+            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+        });
+        if (velocity.y > 0) {
+            [UIView animateWithDuration:0.5f animations:^{
+                [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.0]];
+            }];
+        }
+        else if (velocity.y < 0 && offset.y + scrollView.frame.size.height != scrollView.contentSize.height) {
+            [UIView animateWithDuration:0.5f animations:^{
+                [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6]];
+            }];
+        }
+    }
+}
 %end
 
+%end
 
 /* Custom Scroll View {{{ */
 

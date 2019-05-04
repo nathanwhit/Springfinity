@@ -39,6 +39,10 @@ typedef struct SBIconCoordinate {
 - (void)addExtension:(NSString *)name;
 @end
 
+@interface UIScreen (priv)
+- (id)_accessibilityStatusBar;
+@end
+
 @interface SBIcon : NSObject
 - (BOOL)isPlaceholder; // iOS 6.0+
 - (BOOL)isDestinationHole; // iOS 5.x
