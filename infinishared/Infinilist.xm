@@ -443,7 +443,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
         CGSize screenSize = [[UIScreen mainScreen] bounds].size;
         CGFloat dockMaskHeight = 0;
         CGFloat dockMaskPadding = 0;
-        CGFloat maskYOffset = DefaultStatusbarHeight;
+        CGFloat maskYOffset = DefaultStatusbarHeight+3;
         CGFloat adjustmentAmount = 0;
         CGFloat bottomScrollInset = 0;
         if (clipsStatusbar == kIFFullHideSB) {
@@ -503,7 +503,14 @@ static void IFPreferencesApply() {
         IFPreferencesApplyToList(listView);
     });
     hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
-
+    if (hideSB != kIFPartialHideSB) {
+        static dispatch_once_t statusBarFind;
+        static UIView *statusBar;
+        dispatch_once(&statusBarFind, ^{
+            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+        });
+        statusBar.backgroundColor = nil;
+    }
 }
 
 /* }}} */

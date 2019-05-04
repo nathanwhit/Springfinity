@@ -45,6 +45,7 @@
 #include "infinishared/Infinilist.xm"
 #include "infinishared/Preferences.h"
 #include <substrate.h>
+#include <math.h>
 
 
 @interface UIScrollView (iOS12)
@@ -518,7 +519,7 @@ static bool dropping = false;
 %hook SBIconController
 - (void)_performInitialLayoutWithOrientation:(NSInteger)orient {
     %orig;
-    IFPreferencesLoad();
+    IFPreferencesApply();
     IFDockHiding dockHide = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
     if (dockHide == kIFHideDock || dockHide == kIFHideDockPC) {
         IFSetDockHiding(YES);
@@ -530,55 +531,13 @@ static bool dropping = false;
 %new
 - (void)scrollViewDidScroll:(UIScrollView*)scrollView {
     if ([scrollView isKindOfClass: [IFInfiniboardScrollView class]] && hideSB == kIFPartialHideSB) {
-        // static CGFloat lastYVelocity;
-        CGPoint velocity = [scrollView.panGestureRecognizer velocityInView:self];
         CGPoint offset = scrollView.contentOffset;
         static dispatch_once_t statusBarFind;
         static UIView *statusBar;
         dispatch_once(&statusBarFind, ^{
             statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
         });
-        if (velocity.y < 0 && offset.y < 50) {
-            [UIView animateWithDuration:0.5f animations:^{
-                [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6]];
-            }];
-        }
-        // lastYVelocity = velocity.y;
-    }
-}
-
-%new
-- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView {
-    if ([scrollView isKindOfClass: [IFInfiniboardScrollView class]] && hideSB == kIFPartialHideSB) {
-        CGPoint velocity = [scrollView.panGestureRecognizer velocityInView:scrollView];
-        CGPoint offset = scrollView.contentOffset;
-        static dispatch_once_t statusBarFind;
-        static UIView *statusBar;
-        dispatch_once(&statusBarFind, ^{
-            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
-        });
-        if (velocity.y < 0 && offset.y + scrollView.frame.size.height < scrollView.contentSize.height) {
-            [UIView animateWithDuration:(offset.y / velocity.y) animations:^{
-                [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6]];
-            }];
-        }
-    }
-}
-
-
-%new
-- (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(CGPoint *)targetContentOffset {
-    if ([scrollView isKindOfClass: [IFInfiniboardScrollView class]] && hideSB == kIFPartialHideSB) {
-        static dispatch_once_t statusBarFind;
-        static UIView *statusBar;
-        dispatch_once(&statusBarFind, ^{
-            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
-        });
-        if (velocity.y < 0 && targetContentOffset->y < 2) {
-            [UIView animateWithDuration:(scrollView.contentOffset.y / velocity.y) animations:^{
-                [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.0]];
-            }];
-        }
+        [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6*fmin(offset.y/50, 1)]];
     }
 }
 %end
