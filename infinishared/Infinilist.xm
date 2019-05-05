@@ -185,11 +185,14 @@ typedef enum {
 
 #define DefaultPageControlHeight 37
 
+#define IFInfiniboardIdentifier @"Infiniboard12"
+
 // Utils
 
 static NSUInteger IFFlagExpandedFrame = 0;
 static NSUInteger IFFlagDefaultDimensions = 0;
 static IFSBHiding hideSB = kIFPartialHideSB;
+static NSString *IFTweakIdentifier = @IFMacroQuote(IFConfigurationTweakIdentifier);
 
 static void printSubviews(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
     std::deque<UIView*> viewQueue;
@@ -411,6 +414,54 @@ static void IFSetDockHiding(BOOL hide) {
     }
 }
 
+static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollView *scrollView) {
+    IFSBHiding clipsStatusbar = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
+    IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
+    [scrollView setClipsToBounds:NO];
+    [listView setClipsToBounds:NO];
+
+    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat dockMaskHeight = 0;
+    CGFloat dockMaskPadding = 0;
+    CGFloat maskYOffset = DefaultStatusbarHeight+3;
+    CGFloat adjustmentAmount = 0;
+    CGFloat bottomScrollInset = 0;
+    if (clipsStatusbar == kIFFullHideSB) {
+        maskYOffset = (DefaultStatusbarHeight/5)-1;
+        // bottomScrollInset = -5.5;
+    }
+
+    if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
+        IFSetDockHiding(YES);
+        Class dockClass = NSClassFromString(@"SBDockView");
+        if (hidesDock == kIFHideDockPC) {
+            SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+            dockMaskHeight = [dockClass defaultHeight];
+            dockMaskPadding = [dockClass defaultHeightPadding];
+            if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
+                CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                adjustmentAmount = -pageControlFrame.size.height*0.6;
+                // bottomScrollInset *= 1.1;
+            }
+            else {
+                adjustmentAmount = -DefaultPageControlHeight*0.6;
+                // bottomScrollInset *= 1.1;
+            }
+        }
+    }
+    else {
+        IFSetDockHiding(NO);
+    }
+
+
+    CALayer *maskLayer = [CALayer layer];
+    maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
+    maskLayer.backgroundColor = [UIColor blackColor].CGColor;
+    [scrollView layer].mask = maskLayer;
+    [listView layer].mask = maskLayer;
+    // [scrollView setContentInset:UIEdgeInsetsMake(2,0,bottomScrollInset,0)];
+}
+
 static void IFPreferencesApplyToList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
@@ -418,8 +469,6 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
-    IFSBHiding clipsStatusbar = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
-    IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -439,50 +488,7 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     [scrollView setPagingEnabled:page];
 
     if (![listView isKindOfClass:NSClassFromString(@"SBDockIconListView")]) {
-        [scrollView setClipsToBounds:NO];
-        [listView setClipsToBounds:NO];
-
-        CGSize screenSize = [[UIScreen mainScreen] bounds].size;
-        CGFloat dockMaskHeight = 0;
-        CGFloat dockMaskPadding = 0;
-        CGFloat maskYOffset = DefaultStatusbarHeight+3;
-        CGFloat adjustmentAmount = 0;
-        CGFloat bottomScrollInset = 0;
-        if (clipsStatusbar == kIFFullHideSB) {
-            maskYOffset = (DefaultStatusbarHeight/5)-1;
-            // bottomScrollInset = -5.5;
-        }
-
-        if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
-            IFSetDockHiding(YES);
-            Class dockClass = NSClassFromString(@"SBDockView");
-            if (hidesDock == kIFHideDockPC) {
-                SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
-                dockMaskHeight = [dockClass defaultHeight];
-                dockMaskPadding = [dockClass defaultHeightPadding];
-                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
-                    CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
-                    adjustmentAmount = -pageControlFrame.size.height*0.6;
-                    // bottomScrollInset *= 1.1;
-                }
-                else {
-                    adjustmentAmount = -DefaultPageControlHeight*0.6;
-                    // bottomScrollInset *= 1.1;
-                }
-            }
-        }
-        else {
-            IFSetDockHiding(NO);
-        }
-
-
-        CALayer *maskLayer = [CALayer layer];
-        maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
-        maskLayer.backgroundColor = [UIColor blackColor].CGColor;
-        [scrollView layer].mask = maskLayer;
-        [listView layer].mask = maskLayer;
-
-        // [scrollView setContentInset:UIEdgeInsetsMake(2,0,bottomScrollInset,0)];
+        IFPreferencesApplyToInfiniboard(listView, scrollView);
     }
 
     if (bounce == kIFScrollBounceExtra) {
@@ -504,14 +510,16 @@ static void IFPreferencesApply() {
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
     });
-    hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
-    if (hideSB != kIFPartialHideSB) {
-        static dispatch_once_t statusBarFind;
-        static UIView *statusBar;
-        dispatch_once(&statusBarFind, ^{
-            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
-        });
-        statusBar.backgroundColor = nil;
+    if ([IFTweakIdentifier isEqualToString: IFInfiniboardIdentifier]) {
+        hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
+        if (hideSB != kIFPartialHideSB) {
+            static dispatch_once_t statusBarFind;
+            static UIView *statusBar;
+            dispatch_once(&statusBarFind, ^{
+                statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+            });
+            statusBar.backgroundColor = nil;
+        }
     }
 }
 
