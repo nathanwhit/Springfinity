@@ -525,6 +525,18 @@ static bool dropping = false;
         IFSetDockHiding(YES);
     }
 }
+
+- (void)_lockScreenUIWillLock:(id)arg1 {
+    %orig;
+    if (hideSB == kIFPartialHideSB) {
+        static dispatch_once_t statusBarFind;
+        static UIView *statusBar;
+        dispatch_once(&statusBarFind, ^{
+            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+        });
+        statusBar.backgroundColor = nil;
+    }
+}
 %end
 
 %hook SBUIController
