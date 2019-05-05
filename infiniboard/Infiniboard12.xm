@@ -527,6 +527,14 @@ static bool dropping = false;
 }
 %end
 
+%hook SBUIController
+- (void)_willRevealOrHideContentView {
+    %orig;
+    IFRestoreIconLists();
+}
+
+%end
+
 %hook SBRootIconListView
 %new
 - (void)scrollViewDidScroll:(UIScrollView*)scrollView {
