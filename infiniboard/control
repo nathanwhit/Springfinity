@@ -9,6 +9,6 @@ Suggests: com.chpwn.iconsupport
 Version: 3.2-b
 Architecture: iphoneos-arm
 Description: A revival of infiniboard for iOS 11 & 12. Vertically scroll on your homescreen.
-Icon: file:///Library/PreferenceLoader/Preferences/Infiniboard.png
+Icon: file:///Library/PreferenceBundles/infiniboard12prefs.bundle/Infiniboard12Prefs@3x.png
 Tag: cydia::commercial
 dev: Nathan Whitaker
