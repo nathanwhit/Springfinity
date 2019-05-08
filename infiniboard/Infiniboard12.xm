@@ -94,35 +94,6 @@
 
 %end
 
-%hook SBIconController
-
-- (void)openFolderIcon:(id)arg1 animated:(_Bool)arg2 withCompletion:(id)arg3 {
-    %orig;
-    if ([arg1 isKindOfClass:%c(SBIcon)]) {
-        SBIcon *folderIcon = (SBIcon*)arg1;
-        SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        if (scrollView != nil) {
-            // We have a scroll view, so this is a list we care about.
-            SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-            [scrollView scrollRectToVisible:[folderIconView frame] animated:YES];
-        } else {
-            // Get last icon on current page; scroll that icon to visible.
-            // (This fixes visual issues when icons are partially scrolled
-            // between rows and a folder is opened when it's in the dock.)
-            CGPoint point = CGPointMake(0, [listView bounds].size.height);
-            SBIcon *lastIcon = [listView iconAtPoint:point index:NULL];
-            SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
-
-            if (lastIconView != nil) {
-                [scrollView scrollRectToVisible:[lastIconView frame] animated:YES];
-            }
-        }
-    }
-}
-
-%end
-
 %hook SBRootFolderView
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
@@ -522,15 +493,15 @@ static bool dropping = false;
 }
 %end
 
-%hook SBRootIconListView
-- (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
-    NSUInteger row = [self rowAtPoint:arg1]+1;
-    NSUInteger col = [self columnAtPoint:arg1]+1;
-    NSUInteger numCols = [self iconColumnsForCurrentOrientation];
-    NSUInteger index = ((row-1) * numCols) + col - 1;
-    return [[self model] iconAtIndex: index];
-}
-%end
+// %hook SBRootIconListView
+// - (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
+//     NSUInteger row = [self rowAtPoint:arg1]+1;
+//     NSUInteger col = [self columnAtPoint:arg1]+1;
+//     NSUInteger numCols = [self iconColumnsForCurrentOrientation];
+//     NSUInteger index = ((row-1) * numCols) + col - 1;
+//     return [[self model] iconAtIndex: index];
+// }
+// %end
 
 %hook SBIconController
 - (void)_performInitialLayoutWithOrientation:(NSInteger)orient {

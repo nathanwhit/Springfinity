@@ -732,7 +732,7 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
         CGSize iconSize = IFIconDefaultSize();
 
         contentSize.width = insets.left + effectiveDimensions.columns * (iconSize.width + padding.width) - padding.width + insets.right;
-        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) + insets.bottom;
+        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) - padding.height + insets.bottom;
     }
 
     return contentSize;
