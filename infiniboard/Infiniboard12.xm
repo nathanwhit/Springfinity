@@ -232,7 +232,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (BOOL)shouldReparentView:(UIView*)view {
-    if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
+    if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)] && view.superview.superview == self) {
         return NO;
     }
     else {
@@ -477,16 +477,19 @@ static bool dropping = false;
 - (void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
     %orig;
     recipientIcon = nil;
-    // dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
         dispatch_async(dispatch_get_main_queue(), ^{
             IFIconListSizingUpdateIconList(listView);
         });
     }
     [self compactAndLayoutRootIconLists];
-    // [listView compactAndLayoutFol]
-    // });
 }
+
+- (void)iconListView:(id)arg1 iconDropSessionDidEnd:(id)arg2 {
+    %orig;
+    [self compactAndLayoutRootIconLists];
+}
+
 %end
 
 %hook UIDragPreviewTarget
