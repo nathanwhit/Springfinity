@@ -102,7 +102,7 @@
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>key</key>
 			<string>RestoreEnabled</string>
 			<key>label</key>

@@ -38,7 +38,7 @@
 #define IFConfigurationScrollViewClass IFInfiniboardScrollView
 // #define IFConfigurationFullPages (dlopen("/Library/MobileSubstrate/DynamicLibraries/Iconoclasm.dylib", RTLD_LAZY) != NULL)
 
-#define IFPreferencesRestoreEnabled @"RestoreEnabled", NO
+#define IFPreferencesRestoreEnabled @"RestoreEnabled", YES
 #define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", NO
 
 #include <UIKit/UIKit.h>
@@ -149,7 +149,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 %group IFBasic
-%hook SBIconListView
+%hook SBRootIconListView
 
 /* View Hierarchy {{{ */
 
