@@ -294,7 +294,7 @@ __attribute__((constructor)) static void IFListsInitialize() {
 }
 
 __attribute__((unused)) static void IFListsIterateViews(void (^block)(SBIconListView *, UIScrollView *)) {
-    for (NSUInteger i = 0; i < IFMinimum([IFListsListViews count], [IFListsScrollViews count]); i++) {
+    for (NSUInteger i = 0; i < fmin([IFListsListViews count], [IFListsScrollViews count]); i++) {
         block([IFListsListViews objectAtIndex:i], [IFListsScrollViews objectAtIndex:i]);
     }
 }
