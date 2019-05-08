@@ -188,6 +188,10 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (void)setFrame:(CGRect)frame {
+    if (frame.size.width == 0) {
+        %orig;
+        return;
+    }
     if (IFIconListIsValid(self)) {
         UIScrollView *scrollView = IFListsScrollViewForListView(self);
 
@@ -206,11 +210,11 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
         %orig;
         if (pages) {
-            IFIconListSizingUpdateIconList(self);
+            // IFIconListSizingUpdateIconList(self);
             IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
             pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
         }
-        if ((!pages && !CGRectEqualToRect(scrollView.frame, self.bounds)) || (pages && scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height && scrollView.frame.size.width != self.bounds.size.width)) {
+        if ((!pages && !CGRectEqualToRect(scrollView.frame, self.bounds)) || (pages && (scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height || scrollView.frame.size.width != self.bounds.size.width))) {
             CGRect bounds = [self bounds];
             if (pages) {
                 bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
@@ -562,9 +566,9 @@ static bool dropping = false;
 %hook SBRootFolderWithDock
 - (id)indexPathForFirstFreeSlotAvoidingFirstList:(BOOL)avoid {
     id path = %orig(NO);
-    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-        IFIconListSizingUpdateIconList(listView);
-    });
+    // IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+    //     IFIconListSizingUpdateIconList(listView);
+    // });
     return path;
 }
 %end

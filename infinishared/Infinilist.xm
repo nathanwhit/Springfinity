@@ -462,7 +462,6 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     maskLayer.backgroundColor = [UIColor blackColor].CGColor;
     [scrollView layer].mask = maskLayer;
     [listView layer].mask = maskLayer;
-    // [scrollView setContentInset:UIEdgeInsetsMake(2,0,bottomScrollInset,0)];
 }
 
 static void IFPreferencesApplyToList(SBIconListView *listView) {
@@ -631,7 +630,6 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) 
     if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         // This is ugly, but we need to round up here.
         dimensions.rows = ((dimensions.rows / defaultDimensions.rows) + ((dimensions.rows % defaultDimensions.rows) ? 1 : 0)) * defaultDimensions.rows;
-        logf("Rows : %lu", dimensions.rows);
         dimensions.columns = ((dimensions.columns / defaultDimensions.columns) + ((dimensions.columns % defaultDimensions.columns) ? 1 : 0)) * defaultDimensions.columns;
     }
 
@@ -734,7 +732,7 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
         CGSize iconSize = IFIconDefaultSize();
 
         contentSize.width = insets.left + effectiveDimensions.columns * (iconSize.width + padding.width) - padding.width + insets.right;
-        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) - padding.height + insets.bottom;
+        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) + insets.bottom;
     }
 
     return contentSize;
