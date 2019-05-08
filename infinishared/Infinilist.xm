@@ -776,7 +776,7 @@ static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScroll
     if (!CGSizeEqualToSize(oldSize, newSize)) {
         [UIView animateWithDuration:0.3f animations:^{
             [scrollView setContentSize:newSize];
-            [scrollView setContentOffset:offset animated:YES];
+            [scrollView setContentOffset:offset animated:NO];
         }];
     }
 }
@@ -800,7 +800,7 @@ static void IFRestoreIconLists(void) {
 
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         if (IFPreferencesBoolForKey(IFPreferencesRestoreEnabled)) {
-            [scrollView setContentOffset:CGPointZero animated:YES];
+            [scrollView setContentOffset:CGPointZero animated:NO];
         }
 
         if (IFPreferencesIntForKey(IFPreferencesScrollbarStyle) != kIFScrollbarStyleNone) {
