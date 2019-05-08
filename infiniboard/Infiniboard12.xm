@@ -193,8 +193,10 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
         NSUInteger pagex = 0;
         NSUInteger pagey = 0;
+        CGFloat pagingAdjustmentHeight = 0;
+        bool pages = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
 
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        if (pages) {
             CGPoint offset = [scrollView contentOffset];
             CGRect bounds = [self bounds];
 
@@ -203,19 +205,26 @@ static void IFIconListInitialize(SBIconListView *listView) {
         }
 
         %orig;
-
-        [scrollView setFrame:[self bounds]];
-        IFIconListSizingUpdateIconList(self);
-
-        [self layoutIconsNow];
-
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-            CGPoint offset = [scrollView contentOffset];
+        if (pages) {
+            IFIconListSizingUpdateIconList(self);
+            IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
+            pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
+        }
+        if ((!pages && !CGRectEqualToRect(scrollView.frame, self.bounds)) || (pages && scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height && scrollView.frame.size.width != self.bounds.size.width)) {
             CGRect bounds = [self bounds];
+            if (pages) {
+                bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
+                static dispatch_once_t getInitialTouchInsetsToken;
+                static UIEdgeInsets touchInsets;
+                dispatch_once(&getInitialTouchInsetsToken, ^{
+                    touchInsets = [scrollView _autoScrollTouchInsets];
+                });
+                [scrollView _setAutoScrollTouchInsets:UIEdgeInsetsMake(touchInsets.top / 4, touchInsets.left, touchInsets.bottom / 4, touchInsets.right)];
+            }
 
-            offset.x = (pagex * bounds.size.width);
-            offset.y = (pagey * bounds.size.height);
-            [scrollView setContentOffset:offset animated:YES];
+            [scrollView setFrame:bounds];
+
+            [self layoutIconsNow];
         }
     } else {
         %orig;

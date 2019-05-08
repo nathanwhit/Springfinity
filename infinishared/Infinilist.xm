@@ -280,6 +280,9 @@ __attribute__((unused)) static BOOL IFDockIconListIsValid(SBIconListView *listVi
 static NSMutableArray *IFListsListViews = nil;
 static NSMutableArray *IFListsScrollViews = nil;
 
+// Forward declaration
+static void IFIconListSizingUpdateIconList(SBIconListView *listView);
+
 
 __attribute__((constructor)) static void IFListsInitialize() {
     // Non-retaining mutable arrays, since we don't want to own these objects.
@@ -509,6 +512,7 @@ static void IFPreferencesApply() {
     IFPreferencesLoad();
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
+        IFIconListSizingUpdateIconList(listView);
     });
     if ([IFTweakIdentifier isEqualToString: IFInfiniboardIdentifier]) {
         hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
@@ -593,7 +597,7 @@ static IFIconListDimensions IFSizingMaximumDimensionsForOrientation(UIInterfaceO
     return dimensions;
 }
 
-static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, NSUInteger iconsToAdd) {
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
     IFIconListDimensions dimensions = IFIconListDimensionsZero;
     UIInterfaceOrientation orientation = IFIconListOrientation(listView);
 
@@ -602,7 +606,7 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
 
         if (IFConfigurationExpandWhenEditing && [IFIconControllerSharedInstance() isEditing]) {
             // Add room to drop the icon into.
-            idx += iconsToAdd;
+            idx += 1;
         }
 
         IFIconListDimensions maximumDimensions = IFSizingMaximumDimensionsForOrientation(orientation);
@@ -624,10 +628,11 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
 
     IFIconListDimensions defaultDimensions = _IFSizingDefaultDimensions(listView);
 
-    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         // This is ugly, but we need to round up here.
-        dimensions.rows = ceilf((float) dimensions.rows / (float) defaultDimensions.rows) * defaultDimensions.rows;
-        dimensions.columns = ceilf((float) dimensions.columns / (float) defaultDimensions.columns) * defaultDimensions.columns;
+        dimensions.rows = ((dimensions.rows / defaultDimensions.rows) + ((dimensions.rows % defaultDimensions.rows) ? 1 : 0)) * defaultDimensions.rows;
+        logf("Rows : %lu", dimensions.rows);
+        dimensions.columns = ((dimensions.columns / defaultDimensions.columns) + ((dimensions.columns % defaultDimensions.columns) ? 1 : 0)) * defaultDimensions.columns;
     }
 
     // Make sure we have at least the default number of icons.
@@ -635,10 +640,6 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
     dimensions.columns = (dimensions.columns > defaultDimensions.columns) ? dimensions.columns : defaultDimensions.columns;
 
     return dimensions;
-}
-
-static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
-    return IFSizingContentDimensions(listView, 1);
 }
 
 /* }}} */
@@ -707,15 +708,6 @@ static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconLis
     return info;
 }
 
-static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconList(SBIconListView *listView, NSUInteger iconsToAdd) {
-    IFIconListSizingInformation *info = [[IFIconListSizingInformation alloc] init];
-    [info setDefaultDimensions:_IFSizingDefaultDimensions(listView)];
-    [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
-    [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
-    [info setContentDimensions:IFSizingContentDimensions(listView, iconsToAdd)];
-    return info;
-}
-
 /* }}} */
 
 /* Content Size {{{ */
@@ -725,23 +717,24 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
 
     IFIconListDimensions effectiveDimensions = [info contentDimensions];
     CGSize contentSize = CGSizeZero;
+    CGSize padding = [info defaultPadding];
+    UIEdgeInsets insets = [info defaultInsets];
 
-    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         IFIconListDimensions defaultDimensions = [info defaultDimensions];
         CGSize size = [listView frame].size;
+        CGFloat pageAdjustmentHeight = fabs(padding.height - insets.top - insets.bottom);
 
         IFIconListDimensions result = IFIconListDimensionsZero;
         result.columns = (effectiveDimensions.columns / defaultDimensions.columns);
         result.rows = (effectiveDimensions.rows / defaultDimensions.rows);
-
-        contentSize = CGSizeMake(size.width * result.columns, size.height * result.rows);
-    } else {
-        CGSize padding = [info defaultPadding];
-        UIEdgeInsets insets = [info defaultInsets];
+        contentSize = CGSizeMake(size.width * result.columns, (size.height-pageAdjustmentHeight) * result.rows);
+    } 
+    else {
         CGSize iconSize = IFIconDefaultSize();
 
         contentSize.width = insets.left + effectiveDimensions.columns * (iconSize.width + padding.width) - padding.width + insets.right;
-        contentSize.height = insets.top + effectiveDimensions.rows * (iconSize.height + padding.height) - padding.height + insets.bottom;
+        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) - padding.height + insets.bottom;
     }
 
     return contentSize;
@@ -773,13 +766,13 @@ static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScroll
             newSize.width = scrollSize.width;
         }
 
-        // Make sure the content offset is never outside the scroll view.
-        if (offset.y + scrollSize.height > newSize.height) {
-            // But not if the scroll view is only a few rows.
-            if (newSize.height >= scrollSize.height) {
-                offset.y = newSize.height - scrollSize.height;
-            }
-        }
+        // // Make sure the content offset is never outside the scroll view.
+        // if (offset.y + scrollSize.height > newSize.height) {
+        //     // But not if the scroll view is only a few rows.
+        //     if (newSize.height >= scrollSize.height) {
+        //         offset.y = newSize.height - scrollSize.height;
+        //     }
+        // }
     }
 
     if (!CGSizeEqualToSize(oldSize, newSize)) {
@@ -799,13 +792,6 @@ static void IFIconListSizingUpdateIconList(SBIconListView *listView) {
     IFIconListSizingUpdateContentSize(listView, scrollView);
 }
 
-static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUInteger iconsToAdd) {
-    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-    IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView, iconsToAdd), listView);
-    IFIconListSizingUpdateContentSize(listView, scrollView);
-}
-
 /* }}} */
 
 /* Fixes and Restore Implementation {{{ */
@@ -813,7 +799,6 @@ static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUI
 
 #ifdef IFPreferencesRestoreEnabled
 static void IFRestoreIconLists(void) {
-    IFPreferencesApply();
 
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         if (IFPreferencesBoolForKey(IFPreferencesRestoreEnabled)) {

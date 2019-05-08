@@ -43,6 +43,11 @@ typedef struct SBIconCoordinate {
 - (id)_accessibilityStatusBar;
 @end
 
+@interface UIScrollView (priv)
+- (UIEdgeInsets)_autoScrollTouchInsets;
+- (void)_setAutoScrollTouchInsets:(UIEdgeInsets)insets;
+@end
+
 @interface SBIcon : NSObject
 - (BOOL)isPlaceholder; // iOS 6.0+
 - (BOOL)isDestinationHole; // iOS 5.x
