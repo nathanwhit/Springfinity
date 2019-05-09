@@ -379,6 +379,11 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
+- (void)prepareToRotateToInterfaceOrientation:(NSInteger)orient {
+    %orig;
+    IFPreferencesApply();
+}
+
 /* }}} */
 
 -(BOOL)allowsAddingIconCount:(NSUInteger)count {

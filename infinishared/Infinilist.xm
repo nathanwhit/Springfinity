@@ -352,6 +352,17 @@ __attribute__((unused)) static UIView *IFStatusbarSharedInstance() {
     return statusBar;
 }
 
+__attribute__((unused)) static SpringBoard *IFSpringBoardSharedInstance() {
+    static __weak SpringBoard *springboard;
+    if (!springboard) {
+        UIApplication *app = [UIApplication sharedApplication];
+        if ([app isMemberOfClass: NSClassFromString(@"SpringBoard")]) {
+            springboard = (SpringBoard*)app;
+        }
+    }
+    return springboard;
+}
+
 __attribute__((unused)) static NSUInteger IFIconListLastIconIndex(SBIconListView *listView) {
     NSArray *icons = [listView icons];
     SBIcon *lastIcon = nil;
@@ -447,16 +458,19 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         Class dockClass = NSClassFromString(@"SBDockView");
         if (hidesDock == kIFHideDockPC) {
             SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
-            dockMaskHeight = [dockClass defaultHeight];
-            dockMaskPadding = [dockClass defaultHeightPadding];
-            if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
-                CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
-                adjustmentAmount = -pageControlFrame.size.height*0.6;
-                // bottomScrollInset *= 1.1;
-            }
-            else {
-                adjustmentAmount = -DefaultPageControlHeight*0.6;
-                // bottomScrollInset *= 1.1;
+            SpringBoard *springboard = IFSpringBoardSharedInstance();
+            if ([springboard homeScreenRotationStyle] != 2 && [springboard activeInterfaceOrientation] < 2) {
+                dockMaskHeight = [dockClass defaultHeight];
+                dockMaskPadding = [dockClass defaultHeightPadding];
+                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
+                    CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                    adjustmentAmount = -pageControlFrame.size.height*0.6;
+                    // bottomScrollInset *= 1.1;
+                }
+                else {
+                    adjustmentAmount = -DefaultPageControlHeight*0.6;
+                    // bottomScrollInset *= 1.1;
+                }
             }
         }
     }
@@ -468,7 +482,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     CALayer *maskLayer = [CALayer layer];
     maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
     maskLayer.backgroundColor = [UIColor blackColor].CGColor;
-    [scrollView layer].mask = maskLayer;
+    // [scrollView layer].mask = maskLayer;
     [listView layer].mask = maskLayer;
 }
 

@@ -48,6 +48,11 @@ typedef struct SBIconCoordinate {
 - (void)_setAutoScrollTouchInsets:(UIEdgeInsets)insets;
 @end
 
+@interface SpringBoard : UIApplication
+- (NSInteger)activeInterfaceOrientation;
+- (NSInteger)homeScreenRotationStyle;
+@end
+
 @interface SBIcon : NSObject
 - (BOOL)isPlaceholder; // iOS 6.0+
 - (BOOL)isDestinationHole; // iOS 5.x
