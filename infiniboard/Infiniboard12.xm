@@ -64,23 +64,26 @@
 %hook SBRootIconListView
 
 - (NSUInteger)rowForIcon:(SBIcon *)icon {
-    SBIconView *iconView = IFIconViewForIcon(icon);
-    NSUInteger ret = %orig;
+    if (IFIconListIsValid(self)) {
+        SBIconView *iconView = IFIconViewForIcon(icon);
+        NSUInteger ret = %orig;
 
-    if (IFFlagFolderOpening) {
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-            ret %= IFSizingDefaultDimensionsForIconList(self).rows;
-        } else {
-            CGPoint origin = [iconView frame].origin;
+        if (IFFlagFolderOpening) {
+            if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+                ret %= IFSizingDefaultDimensionsForIconList(self).rows;
+            } else {
+                CGPoint origin = [iconView frame].origin;
 
-            UIScrollView *scrollView = IFListsScrollViewForListView(self);
-            origin.y -= [scrollView contentOffset].y;
+                UIScrollView *scrollView = IFListsScrollViewForListView(self);
+                origin.y -= [scrollView contentOffset].y;
 
-            ret = [self rowAtPoint:origin];
+                ret = [self rowAtPoint:origin];
+            }
         }
-    }
 
-    return ret;
+        return ret;
+    }
+    return %orig;
 }
 
 %new(i@:)
@@ -494,11 +497,14 @@ static bool dropping = false;
 
 %hook SBRootIconListView
 - (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
-    NSUInteger row = [self rowAtPoint:arg1]+1;
-    NSUInteger col = [self columnAtPoint:arg1]+1;
-    NSUInteger numCols = [self iconColumnsForCurrentOrientation];
-    NSUInteger index = ((row-1) * numCols) + col - 1;
-    return [[self model] iconAtIndex: index];
+    if (IFIconListIsValid(self)) {
+        NSUInteger row = [self rowAtPoint:arg1]+1;
+        NSUInteger col = [self columnAtPoint:arg1]+1;
+        NSUInteger numCols = [self iconColumnsForCurrentOrientation];
+        NSUInteger index = ((row-1) * numCols) + col - 1;
+        return [[self model] iconAtIndex: index];
+    }
+    return %orig;
 }
 %end
 %hook SBIconController
