@@ -520,11 +520,7 @@ static bool dropping = false;
 - (void)_lockScreenUIWillLock:(id)arg1 {
     %orig;
     if (hideSB == kIFPartialHideSB) {
-        static dispatch_once_t statusBarFind;
-        static UIView *statusBar;
-        dispatch_once(&statusBarFind, ^{
-            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
-        });
+        UIView *statusBar = IFStatusbarSharedInstance();
         statusBar.backgroundColor = nil;
     }
 }
@@ -550,14 +546,24 @@ static bool dropping = false;
 %hook SBRootIconListView
 %new
 - (void)scrollViewDidScroll:(UIScrollView*)scrollView {
-    if ([scrollView isKindOfClass: [IFInfiniboardScrollView class]] && hideSB == kIFPartialHideSB) {
+    if (hideSB == kIFPartialHideSB) {
         CGPoint offset = scrollView.contentOffset;
-        static dispatch_once_t statusBarFind;
-        static UIView *statusBar;
-        dispatch_once(&statusBarFind, ^{
-            statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
-        });
-        [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6*fmin(offset.y/50, 1)]];
+        static bool dimmed;
+        static __weak UIView *statusBar;
+        if (offset.y <= 50) {
+            if (!statusBar) {
+                statusBar = IFStatusbarSharedInstance();  
+            }
+            [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6*fmin(offset.y/50, 1)]];
+            dimmed = false;
+        }
+        else if (!dimmed) {
+            if (!statusBar) {
+                statusBar = IFStatusbarSharedInstance();  
+            }
+            [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6]];
+            dimmed = true;
+        }
     }
 }
 %end

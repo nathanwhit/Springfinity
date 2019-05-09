@@ -344,6 +344,14 @@ __attribute__((unused)) static SBRootFolder *IFRootFolderSharedInstance() {
     return rootFolder;
 }
 
+__attribute__((unused)) static UIView *IFStatusbarSharedInstance() {
+    static __weak UIView *statusBar;
+    if (!statusBar) {
+        statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+    }
+    return statusBar;
+}
+
 __attribute__((unused)) static NSUInteger IFIconListLastIconIndex(SBIconListView *listView) {
     NSArray *icons = [listView icons];
     SBIcon *lastIcon = nil;
