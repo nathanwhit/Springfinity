@@ -4,7 +4,7 @@ Name: Infiniboard12
 Package: com.nwhit.infiniboard12
 Section: Tweaks
 Pre-Depends: firmware (>= 11.0)
-Depends: mobilesubstrate
+Depends: mobilesubstrate, preferenceloader
 Suggests: com.chpwn.iconsupport
 Version: 3.2-b
 Architecture: iphoneos-arm
