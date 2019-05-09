@@ -251,7 +251,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 - (void)setOrientation:(UIInterfaceOrientation)orientation {
     %orig;
-
     if (IFIconListIsValid(self)) {
         IFIconListSizingUpdateIconList(self);
     }
@@ -493,16 +492,15 @@ static bool dropping = false;
 }
 %end
 
-// %hook SBRootIconListView
-// - (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
-//     NSUInteger row = [self rowAtPoint:arg1]+1;
-//     NSUInteger col = [self columnAtPoint:arg1]+1;
-//     NSUInteger numCols = [self iconColumnsForCurrentOrientation];
-//     NSUInteger index = ((row-1) * numCols) + col - 1;
-//     return [[self model] iconAtIndex: index];
-// }
-// %end
-
+%hook SBRootIconListView
+- (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
+    NSUInteger row = [self rowAtPoint:arg1]+1;
+    NSUInteger col = [self columnAtPoint:arg1]+1;
+    NSUInteger numCols = [self iconColumnsForCurrentOrientation];
+    NSUInteger index = ((row-1) * numCols) + col - 1;
+    return [[self model] iconAtIndex: index];
+}
+%end
 %hook SBIconController
 - (void)_performInitialLayoutWithOrientation:(NSInteger)orient {
     %orig;
@@ -596,4 +594,4 @@ static bool dropping = false;
     %init(IFBasic);
 }
 
-/* }}} 
+/* }}}
