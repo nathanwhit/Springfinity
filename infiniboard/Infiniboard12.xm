@@ -542,9 +542,9 @@ static bool dropping = false;
 %hook SBRootFolderWithDock
 - (id)indexPathForFirstFreeSlotAvoidingFirstList:(BOOL)avoid {
     id path = %orig(NO);
-    // IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-    //     IFIconListSizingUpdateIconList(listView);
-    // });
+    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+        IFIconListSizingUpdateIconList(listView);
+    });
     return path;
 }
 %end
