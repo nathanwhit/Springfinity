@@ -1,1 +1,0 @@
-scp -P 2222 -r root@localhost:/var/mobile/Documents/InspectiveC/SpringBoard/* ./logs/.
