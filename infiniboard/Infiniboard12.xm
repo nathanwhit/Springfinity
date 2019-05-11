@@ -186,10 +186,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
         if (pages) {
             IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
             pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
-        }
-        if ((!pages && !CGRectEqualToRect(scrollView.frame, self.bounds)) || (pages && (scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height || scrollView.frame.size.width != self.bounds.size.width))) {
-            CGRect bounds = [self bounds];
-            if (pages) {
+            if (scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height || scrollView.frame.size.width != self.bounds.size.width) {
+                CGRect bounds = self.bounds;
                 bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
                 static dispatch_once_t getInitialTouchInsetsToken;
                 static UIEdgeInsets touchInsets;
@@ -197,10 +195,13 @@ static void IFIconListInitialize(SBIconListView *listView) {
                     touchInsets = [scrollView _autoScrollTouchInsets];
                 });
                 [scrollView _setAutoScrollTouchInsets:UIEdgeInsetsMake(touchInsets.top / 4, touchInsets.left, touchInsets.bottom / 4, touchInsets.right)];
+                [scrollView setFrame: bounds];
+                [self layoutIconsNow];
+                IFIconListSizingUpdateIconList(self);
             }
-
-            [scrollView setFrame:bounds];
-
+        }
+        else if (!CGRectEqualToRect(scrollView.frame, self.bounds)) {
+            [scrollView setFrame:self.bounds];
             [self layoutIconsNow];
             IFIconListSizingUpdateIconList(self);
         }
