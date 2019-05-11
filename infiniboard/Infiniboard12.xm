@@ -184,7 +184,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
         %orig;
         if (pages) {
-            // IFIconListSizingUpdateIconList(self);
             IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
             pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
         }
@@ -203,6 +202,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
             [scrollView setFrame:bounds];
 
             [self layoutIconsNow];
+            IFIconListSizingUpdateIconList(self);
         }
     } else {
         %orig;
