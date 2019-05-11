@@ -12,7 +12,7 @@
 			<key>label</key>
 			<string>Settings</string>
 	        <key>footerText</key>
-	        <string>Infiniboard 12 - Original credits to Xuzz Productions</string>
+	        <string>Infiniboard 12 - Credits to Xuzz Productions/chpwn for the original Infiniboard</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -102,7 +102,7 @@
 			<key>cell</key>
 			<string>PSSwitchCell</string>
 			<key>default</key>
-			<false/>
+			<true/>
 			<key>key</key>
 			<string>RestoreEnabled</string>
 			<key>label</key>
@@ -128,13 +128,55 @@
 		</dict>
 		<dict>
 			<key>cell</key>
-			<string>PSSwitchCell</string>
+			<string>PSLinkListCell</string>
 			<key>default</key>
-			<true/>
+			<integer>1</integer>
+			<key>detail</key>
+			<string>PSListItemsController</string>
 			<key>key</key>
-			<string>ClipsToBounds</string>
+			<string>ClipsStatusbar</string>
+			<key>label</key>
+			<string>Hide Behind Statusbar</string>
+			<key>validTitles</key>
+			<array>
+				<string>Hide Fully</string>
+				<string>Hide Partially</string>
+				<string>Don't Hide</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+				<integer>2</integer>
+			</array>
+			<key>PostNotification</key>
+			<string>com.nwhit.infiniboard12prefs.preferences-changed</string>
+			<key>defaults</key>
+			<string>com.nwhit.infiniboard12prefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>detail</key>
+			<string>PSListItemsController</string>
+			<key>key</key>
+			<string>ClipsDock</string>
 			<key>label</key>
 			<string>Hide Behind Dock</string>
+			<key>validTitles</key>
+			<array>
+				<string>Dock Only</string>
+				<string>Dock + Page Control</string>
+				<string>Don't Hide</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+				<integer>2</integer>
+			</array>
 			<key>PostNotification</key>
 			<string>com.nwhit.infiniboard12prefs.preferences-changed</string>
 			<key>defaults</key>

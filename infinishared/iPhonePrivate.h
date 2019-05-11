@@ -39,6 +39,20 @@ typedef struct SBIconCoordinate {
 - (void)addExtension:(NSString *)name;
 @end
 
+@interface UIScreen (priv)
+- (id)_accessibilityStatusBar;
+@end
+
+@interface UIScrollView (priv)
+- (UIEdgeInsets)_autoScrollTouchInsets;
+- (void)_setAutoScrollTouchInsets:(UIEdgeInsets)insets;
+@end
+
+@interface SpringBoard : UIApplication
+- (NSInteger)activeInterfaceOrientation;
+- (NSInteger)homeScreenRotationStyle;
+@end
+
 @interface SBIcon : NSObject
 - (BOOL)isPlaceholder; // iOS 6.0+
 - (BOOL)isDestinationHole; // iOS 5.x
@@ -47,6 +61,7 @@ typedef struct SBIconCoordinate {
 
 @interface SBIconDragManager
 - (id)draggedIconsForIdentifiers:(id)arg;
+- (void)compactAndLayoutRootIconLists;
 @end
 
 @interface SBIconListViewDraggingAppPolicyHandler
@@ -67,6 +82,7 @@ typedef struct SBIconCoordinate {
 
 @interface SBIconListModel : NSObject
 - (NSUInteger)indexForIcon:(SBIcon *)icon;
+- (id)iconAtIndex:(NSUInteger)arg1;
 @end
 
 @interface SBFolder : NSObject
@@ -88,7 +104,7 @@ typedef struct SBIconCoordinate {
 @end
 
 @interface SBIconView : UIView
-@property (nonatomic, assign) bool isBeingChecked;
+@property (nonatomic, assign, getter=isBeingChecked) bool beingChecked;
 + (CGSize)defaultIconSize; // iOS 5.0+
 - (SBIcon *)icon;
 @end
@@ -96,6 +112,7 @@ typedef struct SBIconCoordinate {
 @interface SBIconViewMap : NSObject
 + (SBIconViewMap *)homescreenMap;
 - (SBIconView *)iconViewForIcon:(SBIcon *)icon;
+- (SBIconView*)mappedIconViewForIcon:(SBIcon*)icon;
 @end
 
 @interface SBIconListView : UIView
@@ -130,6 +147,8 @@ typedef struct SBIconCoordinate {
 - (void)cleanupAfterRotation;
 
 - (void)layoutIconsNow;
+
+-(SBIconViewMap*)viewMap;
 @end
 
 @interface SBRootIconListView : SBIconListView
@@ -146,7 +165,26 @@ typedef struct SBIconCoordinate {
 - (void)_updateForOrientation:(UIInterfaceOrientation)orientation duration:(NSTimeInterval)interval;
 @end
 
+@interface SBIconListViewDraggingDestinationDelegate
+- (BOOL)updateSpringLoadedPolicyHandlerForDropSession:(id)arg1;
+@end
+
+@interface SBFolderView : UIView
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView; // iOS 7.0+
+@end
+
+@interface SBFolderContainerView : UIView
+- (SBFolderView*)folderView;
+@end
+
+@interface SBIconContentView : UIView
+- (SBFolderContainerView*)childFolderContainerView;
+
+@end
+
 @interface SBIconController : NSObject
+
+- (SBIconContentView*)contentView;
 + (SBIconController *)sharedInstance;
 
 @property (nonatomic, readonly) SBIconViewMap *homescreenIconViewMap; // iOS 9.3+
@@ -197,11 +235,10 @@ typedef struct SBIconCoordinate {
 @interface SBSearchScrollView : UIScrollView // iOS 7.0+
 @end
 
-@interface SBFolderView : UIView
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView; // iOS 7.0+
-@end
-
 @interface SBRootFolderView : SBFolderView // ??
+- (CGRect)effectivePageControlFrame;
+- (id)dockView;
+- (void)_updateDockViewZOrdering;
 @end
 
 @interface SBUIController : NSObject

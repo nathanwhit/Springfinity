@@ -31,22 +31,21 @@
 
 #include <os/log.h>
 #include "InspCWrapper.m"
-#define log(str) os_log(OS_LOG_DEFAULT, str)
-#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
 
-#define IFConfigurationTweakIdentifier Infiniboard
-#define IFConfigurationListClass SBIconListView
+#define IFConfigurationTweakIdentifier Infiniboard12
+#define IFConfigurationListClass SBRootIconListView
 #define IFConfigurationListClassObject (%c(SBRootIconListView) ?: %c(SBIconListView))
 #define IFConfigurationScrollViewClass IFInfiniboardScrollView
 // #define IFConfigurationFullPages (dlopen("/Library/MobileSubstrate/DynamicLibraries/Iconoclasm.dylib", RTLD_LAZY) != NULL)
 
-#define IFPreferencesRestoreEnabled @"RestoreEnabled", NO
+#define IFPreferencesRestoreEnabled @"RestoreEnabled", YES
 #define IFPreferencesFastRestoreEnabled @"FastRestoreEnabled", NO
 
 #include <UIKit/UIKit.h>
 #include "infinishared/Infinilist.xm"
 #include "infinishared/Preferences.h"
 #include <substrate.h>
+#include <math.h>
 
 
 @interface UIScrollView (iOS12)
@@ -62,26 +61,29 @@
 /* }}} */
 
 %group IFInfiniboard
-%hook SBIconListView
+%hook SBRootIconListView
 
 - (NSUInteger)rowForIcon:(SBIcon *)icon {
-    SBIconView *iconView = IFIconViewForIcon(icon);
-    NSUInteger ret = %orig;
+    if (IFIconListIsValid(self)) {
+        SBIconView *iconView = IFIconViewForIcon(icon);
+        NSUInteger ret = %orig;
 
-    if (IFFlagFolderOpening) {
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-            ret %= IFSizingDefaultDimensionsForIconList(self).rows;
-        } else {
-            CGPoint origin = [iconView frame].origin;
+        if (IFFlagFolderOpening) {
+            if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+                ret %= IFSizingDefaultDimensionsForIconList(self).rows;
+            } else {
+                CGPoint origin = [iconView frame].origin;
 
-            UIScrollView *scrollView = IFListsScrollViewForListView(self);
-            origin.y -= [scrollView contentOffset].y;
+                UIScrollView *scrollView = IFListsScrollViewForListView(self);
+                origin.y -= [scrollView contentOffset].y;
 
-            ret = [self rowAtPoint:origin];
+                ret = [self rowAtPoint:origin];
+            }
         }
-    }
 
-    return ret;
+        return ret;
+    }
+    return %orig;
 }
 
 %new(i@:)
@@ -95,138 +97,11 @@
 
 %end
 
-%hook SBIconController
-
-// - (void)_setOpenFolder:(SBFolder *)folder {
-//     log("here");
-//     %orig;
-
-//     if (folder != nil) {
-//         SBIcon *folderIcon = [[self openFolder] icon];
-
-//         SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-//         UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-//         if (scrollView != nil) {
-//             // We have a scroll view, so this is a list we care about.
-//             SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-//             [scrollView scrollRectToVisible:[folderIconView frame] animated:NO];
-//         } else {
-//             // Get last icon on current page; scroll that icon to visible.
-//             // (This fixes visual issues when icons are partially scrolled
-//             // between rows and a folder is opened when it's in the dock.)
-//             CGPoint point = CGPointMake(0, [listView bounds].size.height);
-//             SBIcon *lastIcon = [listView iconAtPoint:point index:NULL];
-//             SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
-
-//             if (lastIconView != nil) {
-//                 [scrollView scrollRectToVisible:[lastIconView frame] animated:NO];
-//             }
-//         }
-//     }
-// }
-
-- (void)openFolderIcon:(id)arg1 animated:(_Bool)arg2 withCompletion:(id)arg3 {
-    %orig;
-    if ([arg1 isKindOfClass:%c(SBIcon)]) {
-        SBIcon *folderIcon = (SBIcon*)arg1;
-        SBIconListView *listView = IFIconListContainingIcon(folderIcon);
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        if (scrollView != nil) {
-            // We have a scroll view, so this is a list we care about.
-            SBIconView *folderIconView = IFIconViewForIcon(folderIcon);
-            [scrollView scrollRectToVisible:[folderIconView frame] animated:NO];
-        } else {
-            // Get last icon on current page; scroll that icon to visible.
-            // (This fixes visual issues when icons are partially scrolled
-            // between rows and a folder is opened when it's in the dock.)
-            CGPoint point = CGPointMake(0, [listView bounds].size.height);
-            SBIcon *lastIcon = [listView iconAtPoint:point index:NULL];
-            SBIconView *lastIconView = IFIconViewForIcon(lastIcon);
-
-            if (lastIconView != nil) {
-                [scrollView scrollRectToVisible:[lastIconView frame] animated:NO];
-            }
-        }
-    }
-}
-
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
-    %orig;
-    IFFastRestoreIconLists();
-}
-
-%end
-
 %hook SBRootFolderView
 
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
     %orig;
     IFFastRestoreIconLists();
-}
-
-%end
-
-%hook SBUIController
-
-- (void)restoreIconList:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated animateWallpaper:(BOOL)animateWallpaper {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated animateWallpaper:(BOOL)wallpaper keepSwitcher:(BOOL)switcher {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated delay:(NSTimeInterval)delay {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimated:(BOOL)animated delay:(NSTimeInterval)delay animateWallpaper:(BOOL)wallpaper keepSwitcher:(BOOL)switcher {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListAnimatedIfNeeded:(BOOL)needed animateWallpaper:(BOOL)wallpaper {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContent {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentAndUnscatterIconsAnimated:(BOOL)animated {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentAndUnscatterIconsAnimated:(BOOL)animated withCompletion:(id)completion {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreContentUpdatingStatusBar:(BOOL)updateStatusBar {
-    %orig;
-    IFRestoreIconLists();
-}
-
-- (void)restoreIconListForSuspendGesture {
-    %orig;
-    IFRestoreIconLists();
 }
 
 %end
@@ -239,8 +114,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
     UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView frame]];
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
-    [scrollView setContentInsetAdjustmentBehavior: UIScrollViewContentInsetAdjustmentAlways];
-    [scrollView setSafeAreaInsets:UIEdgeInsetsZero];
 
     IFListsRegister(listView, scrollView);
     [listView addSubview:scrollView];
@@ -250,7 +123,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 %group IFBasic
-%hook SBIconListView
+%hook SBRootIconListView
 
 /* View Hierarchy {{{ */
 
@@ -266,22 +139,11 @@ static void IFIconListInitialize(SBIconListView *listView) {
     return ret;
 }
 
-- (id)initWithFrame:(CGRect)frame viewMap:(id)viewMap {
-    id ret = %orig;
-    if (self == ret) {
-        if (IFIconListIsValid(self)) {
-            IFIconListInitialize(self);
-        }
-    }
-
-    return ret;
-}
-
 - (id)initWithModel:(id)arg1 orientation:(NSUInteger)arg2 viewMap:(id)arg3 {
     id ret = %orig;
     if (self == ret) {
-        if (IFIconListIsValid(self)) {
-            IFIconListInitialize(self);
+        if (IFIconListIsValid(ret)  && ![self isKindOfClass:%c(SBDockIconListView)]) {
+            IFIconListInitialize(ret);
         }
     }
     return ret;
@@ -300,13 +162,19 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (void)setFrame:(CGRect)frame {
+    if (frame.size.width == 0) {
+        %orig;
+        return;
+    }
     if (IFIconListIsValid(self)) {
         UIScrollView *scrollView = IFListsScrollViewForListView(self);
 
         NSUInteger pagex = 0;
         NSUInteger pagey = 0;
+        CGFloat pagingAdjustmentHeight = 0;
+        bool pages = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
 
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        if (pages) {
             CGPoint offset = [scrollView contentOffset];
             CGRect bounds = [self bounds];
 
@@ -315,19 +183,27 @@ static void IFIconListInitialize(SBIconListView *listView) {
         }
 
         %orig;
-
-        [scrollView setFrame:[self bounds]];
-        IFIconListSizingUpdateIconList(self);
-
-        [self layoutIconsNow];
-
-        if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-            CGPoint offset = [scrollView contentOffset];
-            CGRect bounds = [self bounds];
-
-            offset.x = (pagex * bounds.size.width);
-            offset.y = (pagey * bounds.size.height);
-            [scrollView setContentOffset:offset animated:YES];
+        if (pages) {
+            IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
+            pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
+            if (scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height || scrollView.frame.size.width != self.bounds.size.width) {
+                CGRect bounds = self.bounds;
+                bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
+                static dispatch_once_t getInitialTouchInsetsToken;
+                static UIEdgeInsets touchInsets;
+                dispatch_once(&getInitialTouchInsetsToken, ^{
+                    touchInsets = [scrollView _autoScrollTouchInsets];
+                });
+                [scrollView _setAutoScrollTouchInsets:UIEdgeInsetsMake(touchInsets.top / 4, touchInsets.left, touchInsets.bottom / 4, touchInsets.right)];
+                [scrollView setFrame: bounds];
+                [self layoutIconsNow];
+                IFIconListSizingUpdateIconList(self);
+            }
+        }
+        else if (!CGRectEqualToRect(scrollView.frame, self.bounds)) {
+            [scrollView setFrame:self.bounds];
+            [self layoutIconsNow];
+            IFIconListSizingUpdateIconList(self);
         }
     } else {
         %orig;
@@ -335,7 +211,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
 }
 
 - (BOOL)shouldReparentView:(UIView*)view {
-    if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)]) {
+    if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)] && view.superview.superview == self) {
         return NO;
     }
     else {
@@ -379,7 +255,6 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 - (void)setOrientation:(UIInterfaceOrientation)orientation {
     %orig;
-
     if (IFIconListIsValid(self)) {
         IFIconListSizingUpdateIconList(self);
     }
@@ -505,45 +380,51 @@ static void IFIconListInitialize(SBIconListView *listView) {
     }
 }
 
+- (void)prepareToRotateToInterfaceOrientation:(NSInteger)orient {
+    %orig;
+    IFPreferencesApply();
+}
+
 /* }}} */
 
+-(BOOL)allowsAddingIconCount:(NSUInteger)count {
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
+        return YES;
+    }
+    return %orig;
+}
 
 %end
 
 /* Fixes {{{ */
 
-%hook SBIconView
-%property (nonatomic, assign) bool isBeingChecked;
--(id)superview {
-    id view = %orig;
-    if (![self isBeingChecked]) {
-        return view;
+static void IFSetSuperviewImp(IMP implem);
+
+UIView *(*realSuperview)(id self, SEL _cmd);
+
+UIView *fakeSuperview(id self, SEL _cmd) {
+    UIView *view = (*realSuperview)(self, _cmd);
+    if ([view isKindOfClass:[IFInfiniboardScrollView class]]) {
+        IFSetSuperviewImp((IMP)*realSuperview);
+        return IFListsListViewForScrollView((UIScrollView*)view);
     }
-    else {
-        if ([view isKindOfClass:%c(IFInfiniboardScrollView)]) {
-            SBIconListView *listView = IFListsListViewForScrollView((UIScrollView*)view);
-            return listView;
-        }
-        else {
-            return view;
-        }
-    }
+    return view;
 }
 
--(CGPoint)center {
-    id view = [self superview];
-    CGPoint scrolledCenter = %orig;
-    if ([self isBeingChecked] && [view isKindOfClass:%c(SBRootIconListView)]) {
-        IFInfiniboardScrollView *infiniboardView = (IFInfiniboardScrollView*)IFListsScrollViewForListView((SBIconListView*)view);
-        scrolledCenter.y -= [infiniboardView contentOffset].y;
-        [self setIsBeingChecked:false];
-    }
-    return scrolledCenter;
+static __weak SBIconView *recipientIcon;
+
+UIView *(*oldSuperview)(id self, SEL _cmd);
+
+static void IFSetSuperviewImp(IMP implem) {
+    static dispatch_once_t lookupIconViewClassToken;
+    static Class iconViewClass;
+
+    dispatch_once(&lookupIconViewClassToken, ^{
+        iconViewClass = %c(SBIconView);
+        MSHookMessageEx(iconViewClass, @selector(superview), (IMP)&fakeSuperview, (IMP*)&realSuperview);
+    });
+    MSHookMessageEx(iconViewClass, @selector(superview), implem, NULL);
 }
-
-%end
-
-static __weak UIScrollView *frozenScrollView = nil;
 
 %hook SBIconListViewDraggingAppPolicyHandler
 static bool dropping = false;
@@ -559,51 +440,145 @@ static bool dropping = false;
         if ([view isKindOfClass:%c(SBIconView)]) {
             iconView = (SBIconView*)view;
         }
-        [iconView setIsBeingChecked:true];
-        SBIconListView *listView = IFIconListContainingIcon([iconView icon]);
-        UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-        [scrollView setScrollEnabled:NO];
-        frozenScrollView = scrollView;
+        IFSetSuperviewImp((IMP)&fakeSuperview);
+        dropping = false;
     }
     return view;
 }
 %end
 
-%hook SBIconDragManager
--(void)concludeIconDrop:(id)drop {
-    // This fix (disabling scrolling while the icon drop animation completes) is not ideal, but I'm not sure else how to get around this at the moment
-    dropping = false;
-    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled)) {
-        [frozenScrollView setScrollEnabled:YES];
-        frozenScrollView = nil;
+%hook SBIconDragContext
+- (void)setDestinationFolderIconView:(id)destination forIconWithIdentifier:(id)arg2 {
+    if (destination)
+    {
+        recipientIcon = destination;
     }
     %orig;
 }
 %end
+%hook SBIconDragManager
+- (void)iconListView:(SBIconListView*)listView concludeIconDrop:(id)drop {
+    %orig;
+    recipientIcon = nil;
+    if (IFPreferencesBoolForKey(IFPreferencesScrollEnabled) && IFIconListIsValid(listView)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            IFIconListSizingUpdateIconList(listView);
+        });
+    }
+    [self compactAndLayoutRootIconLists];
+}
+
+- (void)iconListView:(id)arg1 iconDropSessionDidEnd:(id)arg2 {
+    %orig;
+    [self compactAndLayoutRootIconLists];
+}
 
 %end
 
+%hook UIDragPreviewTarget
+- (id)initWithContainer:(UIView*)view center:(CGPoint)targetCenter transform:(CGAffineTransform)arg {
+    if ([view isMemberOfClass:IFConfigurationListClassObject]) {
+        UIScrollView *scrollView = IFListsScrollViewForListView((SBIconListView*)view);
+        if (recipientIcon) {
+            return %orig;
+        }
+        return %orig(scrollView, targetCenter, arg);
+    }
+    return %orig;
+}
+%end
+
+%hook SBIconListViewDraggingDestinationDelegate
+
+- (id)targetItemForSpringLoadingInteractionInView:(id)arg1 atLocation:(CGPoint)arg2 forDropSession:(id)arg3 {
+    if ([arg1 isMemberOfClass:IFConfigurationListClassObject]) {
+        [self updateSpringLoadedPolicyHandlerForDropSession:arg3];
+        SBIcon *newIcon = [arg1 iconAtPoint:arg2 index:nil];
+        SBIconView *newTarget = [[arg1 viewMap] mappedIconViewForIcon:newIcon];
+        return newTarget;
+    }
+    return %orig;
+}
+%end
+
+%hook SBRootIconListView
+- (id)iconAtPoint:(struct CGPoint)arg1 index:(NSUInteger *)arg2 {
+    if (IFIconListIsValid(self)) {
+        NSUInteger row = [self rowAtPoint:arg1]+1;
+        NSUInteger col = [self columnAtPoint:arg1]+1;
+        NSUInteger numCols = [self iconColumnsForCurrentOrientation];
+        NSUInteger index = ((row-1) * numCols) + col - 1;
+        return [[self model] iconAtIndex: index];
+    }
+    return %orig;
+}
+%end
+%hook SBIconController
+- (void)_performInitialLayoutWithOrientation:(NSInteger)orient {
+    %orig;
+    IFPreferencesApply();
+    IFDockHiding dockHide = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
+    if (dockHide == kIFHideDock || dockHide == kIFHideDockPC) {
+        IFSetDockHiding(YES);
+    }
+}
+
+- (void)_lockScreenUIWillLock:(id)arg1 {
+    %orig;
+    if (hideSB == kIFPartialHideSB) {
+        UIView *statusBar = IFStatusbarSharedInstance();
+        statusBar.backgroundColor = nil;
+    }
+}
+%end
+
+%hook SBUIController
+- (void)_willRevealOrHideContentView {
+    %orig;
+    IFRestoreIconLists();
+}
+
+%end
+
+%hook SBRootFolderWithDock
+- (id)indexPathForFirstFreeSlotAvoidingFirstList:(BOOL)avoid {
+    id path = %orig(NO);
+    IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
+        IFIconListSizingUpdateIconList(listView);
+    });
+    return path;
+}
+%end
+%hook SBRootIconListView
+%new
+- (void)scrollViewDidScroll:(UIScrollView*)scrollView {
+    if (hideSB == kIFPartialHideSB) {
+        CGPoint offset = scrollView.contentOffset;
+        static bool dimmed;
+        static __weak UIView *statusBar;
+        if (offset.y <= 50) {
+            if (!statusBar) {
+                statusBar = IFStatusbarSharedInstance();  
+            }
+            [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6*fmin(offset.y/50, 1)]];
+            dimmed = false;
+        }
+        else if (!dimmed) {
+            if (!statusBar) {
+                statusBar = IFStatusbarSharedInstance();  
+            }
+            [statusBar setBackgroundColor: [UIColor colorWithWhite:0 alpha:0.6]];
+            dimmed = true;
+        }
+    }
+}
+%end
+
+%end
 
 /* Custom Scroll View {{{ */
 
 @implementation IFInfiniboardScrollView
-
-- (void)setContentOffset:(CGPoint)offset {
-    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
-        if (offset.y <= 2) {
-            offset.y = -[self adjustedContentInset].top;
-        }
-    }
-    
-    [super setContentOffset:offset];
-}
-
-- (void)setSafeAreaInsets:(UIEdgeInsets)insets {
-    insets.top = 7;
-    insets.bottom = -1.95;
-    [super setSafeAreaInsets:insets];
-    [self safeAreaInsetsDidChange];
-}
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     // Allow accessing Spotlight when scrolled to the top on iOS 7.0+.
@@ -631,8 +606,10 @@ static bool dropping = false;
     IFListsInitialize();
     IFPreferencesInitialize(@"com.nwhit.infiniboard12prefs");
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)IFPreferencesApply, (CFStringRef)@"com.nwhit.infiniboard12prefs.preferences-changed", NULL, 0);
+    dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib", RTLD_LAZY);
+    [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"infiniboard"];
     %init(IFInfiniboard);
     %init(IFBasic);
 }
 
-/* }}} 
+/* }}}

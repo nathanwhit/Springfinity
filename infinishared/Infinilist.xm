@@ -40,14 +40,27 @@
 #include <dlfcn.h>
 #include <objc/runtime.h>
 
-// #include <substrate.h>
+#include <substrate.h>
 
 #include "Preferences.h"
 // #include "iPhonePrivate.h"
 
+#include <deque>
+
 /* }}} */
 
+@interface SBDockView : UIView
++(CGFloat)defaultHeight;
++(CGFloat)defaultHeightPadding;
+@end
+
 /* Configuration Macros {{{ */
+
+#ifndef LOG_MACROS
+#define LOG_MACROS
+#define log(str) os_log(OS_LOG_DEFAULT, str)
+#define logf(fmt, ...) os_log(OS_LOG_DEFAULT, fmt, __VA_ARGS__)
+#endif
 
 #define IFMacroQuote_(x) #x
 #define IFMacroQuote(x) IFMacroQuote_(x)
@@ -132,6 +145,18 @@ typedef enum {
     kIFScrollBounceDisabled
 } IFScrollBounce;
 
+typedef enum {
+    kIFHideDock,
+    kIFHideDockPC,
+    kIFNoHideDock
+} IFDockHiding;
+
+typedef enum {
+    kIFFullHideSB,
+    kIFPartialHideSB,
+    kIFNoHideSB
+} IFSBHiding;
+
 #ifndef IFPreferencesPagingEnabled
     #define IFPreferencesPagingEnabled @"PagingEnabled", NO
 #endif
@@ -148,14 +173,70 @@ typedef enum {
     #define IFPreferencesScrollbarStyle @"ScrollbarStyle", kIFScrollbarStyleBlack
 #endif
 
-#ifndef IFPreferencesClipsToBounds
-    #define IFPreferencesClipsToBounds @"ClipsToBounds", YES
+#ifndef IFPreferencesClipsStatusbar
+    #define IFPreferencesClipsStatusbar @"ClipsStatusbar", kIFPartialHideSB
 #endif
+
+#ifndef IFPreferencesClipsDock
+    #define IFPreferencesClipsDock @"ClipsDock", kIFHideDock
+#endif
+
+#define DefaultStatusbarHeight 20
+
+#define DefaultPageControlHeight 37
+
+#define IFInfiniboardIdentifier @"Infiniboard12"
 
 // Utils
 
 static NSUInteger IFFlagExpandedFrame = 0;
 static NSUInteger IFFlagDefaultDimensions = 0;
+static IFSBHiding hideSB = kIFPartialHideSB;
+static NSString *IFTweakIdentifier = @IFMacroQuote(IFConfigurationTweakIdentifier);
+
+static void printSubviews(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
+    std::deque<UIView*> viewQueue;
+    std::deque<long> levelSizeQueue;
+    viewQueue.push_back(v);
+    long n = 1;
+    log("PARENT");
+    while (!viewQueue.empty()) {
+        UIView *vw = viewQueue.front();
+        viewQueue.pop_front();
+        if (n <= 0) {
+            log("-----------------------");
+            n = levelSizeQueue.front();
+            levelSizeQueue.pop_front();
+            logf("SUBVIEWS OF : %{public}@", vw.superview);
+            log("---");
+        }
+        n--;
+
+        logf("View : %{public}@", vw);
+        if ([vw isKindOfClass:lowestClass]) {
+            continue;
+        }
+        long numSubs = 0;
+        for (UIView *sv in vw.subviews) {
+            if (![sv isKindOfClass:excludedClass]) {
+                viewQueue.push_back(sv);
+                numSubs++;
+            }
+        }
+        if (numSubs > 0) {
+            levelSizeQueue.push_back([vw.subviews count]);
+        }
+
+    }
+}
+
+static void printViewHierarchy(UIView *v, Class lowestClass = Nil, Class excludedClass = Nil) {
+    UIView *vw = v;
+    while (vw.superview) {
+        vw = vw.superview;
+    }
+    printSubviews(vw, lowestClass, excludedClass);
+}
 
 /* }}} */
 
@@ -188,12 +269,19 @@ __attribute__((unused)) static BOOL IFIconListIsValid(SBIconListView *listView) 
     return [listView isMemberOfClass:IFConfigurationListClassObject];
 }
 
+__attribute__((unused)) static BOOL IFDockIconListIsValid(SBIconListView *listView) {
+    return [listView isKindOfClass:IFConfigurationListClassObject];
+}
+
 /* }}} */
 
 /* List Management {{{ */
 
 static NSMutableArray *IFListsListViews = nil;
 static NSMutableArray *IFListsScrollViews = nil;
+
+// Forward declaration
+static void IFIconListSizingUpdateIconList(SBIconListView *listView);
 
 
 __attribute__((constructor)) static void IFListsInitialize() {
@@ -206,7 +294,7 @@ __attribute__((constructor)) static void IFListsInitialize() {
 }
 
 __attribute__((unused)) static void IFListsIterateViews(void (^block)(SBIconListView *, UIScrollView *)) {
-    for (NSUInteger i = 0; i < IFMinimum([IFListsListViews count], [IFListsScrollViews count]); i++) {
+    for (NSUInteger i = 0; i < fmin([IFListsListViews count], [IFListsScrollViews count]); i++) {
         block([IFListsListViews objectAtIndex:i], [IFListsScrollViews objectAtIndex:i]);
     }
 }
@@ -256,6 +344,25 @@ __attribute__((unused)) static SBRootFolder *IFRootFolderSharedInstance() {
     return rootFolder;
 }
 
+__attribute__((unused)) static UIView *IFStatusbarSharedInstance() {
+    static __weak UIView *statusBar;
+    if (!statusBar) {
+        statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+    }
+    return statusBar;
+}
+
+__attribute__((unused)) static SpringBoard *IFSpringBoardSharedInstance() {
+    static __weak SpringBoard *springboard;
+    if (!springboard) {
+        UIApplication *app = [UIApplication sharedApplication];
+        if ([app isMemberOfClass: NSClassFromString(@"SpringBoard")]) {
+            springboard = (SpringBoard*)app;
+        }
+    }
+    return springboard;
+}
+
 __attribute__((unused)) static NSUInteger IFIconListLastIconIndex(SBIconListView *listView) {
     NSArray *icons = [listView icons];
     SBIcon *lastIcon = nil;
@@ -297,6 +404,88 @@ __attribute__((unused)) static SBIconListView *IFIconListContainingIcon(SBIcon *
     }
 }
 
+static void IFSetDockHiding(BOOL hide);
+
+void (*originalDockZOrdering)(id self, SEL _cmd);
+
+void alteredDockZOrdering(id self, SEL _cmd) {
+    SBDockView *dock = [self dockView];
+    [dock.superview bringSubviewToFront:dock];
+}
+
+static void IFSetDockHiding(BOOL hide) {
+    static Class rootFolderViewClass;
+    static __weak SBFolderView *folder; 
+    static dispatch_once_t dockHidingSetupToken;
+    dispatch_once(&dockHidingSetupToken, ^{
+        rootFolderViewClass = NSClassFromString(@"SBRootFolderView");
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)&alteredDockZOrdering, (IMP*)&originalDockZOrdering);
+    });
+    
+    if (!folder) {
+        folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+    }
+    if (hide) {
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)&alteredDockZOrdering, NULL);
+    }
+    else {
+        MSHookMessageEx(rootFolderViewClass, @selector(_updateDockViewZOrdering), (IMP)*originalDockZOrdering, NULL);
+    }
+    if ([folder isKindOfClass:rootFolderViewClass] && [folder respondsToSelector:@selector(_updateDockViewZOrdering)]) {
+        [(SBRootFolderView*)folder _updateDockViewZOrdering];
+    }
+}
+
+static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollView *scrollView) {
+    IFSBHiding clipsStatusbar = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
+    IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
+    [scrollView setClipsToBounds:NO];
+    [listView setClipsToBounds:NO];
+
+    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat dockMaskHeight = 0;
+    CGFloat dockMaskPadding = 0;
+    CGFloat maskYOffset = DefaultStatusbarHeight+3;
+    CGFloat adjustmentAmount = 0;
+    CGFloat bottomScrollInset = 0;
+    if (clipsStatusbar == kIFFullHideSB) {
+        maskYOffset = (DefaultStatusbarHeight/5)-1;
+        // bottomScrollInset = -5.5;
+    }
+
+    if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
+        IFSetDockHiding(YES);
+        Class dockClass = NSClassFromString(@"SBDockView");
+        if (hidesDock == kIFHideDockPC) {
+            SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
+            SpringBoard *springboard = IFSpringBoardSharedInstance();
+            if ([springboard homeScreenRotationStyle] != 2 && [springboard activeInterfaceOrientation] < 2) {
+                dockMaskHeight = [dockClass defaultHeight];
+                dockMaskPadding = [dockClass defaultHeightPadding];
+                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
+                    CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                    adjustmentAmount = -pageControlFrame.size.height*0.6;
+                    // bottomScrollInset *= 1.1;
+                }
+                else {
+                    adjustmentAmount = -DefaultPageControlHeight*0.6;
+                    // bottomScrollInset *= 1.1;
+                }
+            }
+        }
+    }
+    else {
+        IFSetDockHiding(NO);
+    }
+
+
+    CALayer *maskLayer = [CALayer layer];
+    maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
+    maskLayer.backgroundColor = [UIColor blackColor].CGColor;
+    // [scrollView layer].mask = maskLayer;
+    [listView layer].mask = maskLayer;
+}
+
 static void IFPreferencesApplyToList(SBIconListView *listView) {
     UIScrollView *scrollView = IFListsScrollViewForListView(listView);
 
@@ -304,7 +493,6 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
     IFScrollBounce bounce = (IFScrollBounce) IFPreferencesIntForKey(IFPreferencesScrollBounce);
     IFScrollbarStyle bar = (IFScrollbarStyle) IFPreferencesIntForKey(IFPreferencesScrollbarStyle);
     BOOL page = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
-    BOOL clips = IFPreferencesBoolForKey(IFPreferencesClipsToBounds);
     [scrollView setShowsVerticalScrollIndicator:YES];
     [scrollView setShowsHorizontalScrollIndicator:YES];
     if (bar == kIFScrollbarStyleBlack) {
@@ -322,8 +510,10 @@ static void IFPreferencesApplyToList(SBIconListView *listView) {
 
     [scrollView setScrollEnabled:scroll];
     [scrollView setPagingEnabled:page];
-    [scrollView setClipsToBounds:clips];
-    [listView setClipsToBounds:clips];
+
+    if (![listView isKindOfClass:NSClassFromString(@"SBDockIconListView")]) {
+        IFPreferencesApplyToInfiniboard(listView, scrollView);
+    }
 
     if (bounce == kIFScrollBounceExtra) {
         NSUInteger idx = 0;
@@ -343,7 +533,19 @@ static void IFPreferencesApply() {
     IFPreferencesLoad();
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         IFPreferencesApplyToList(listView);
+        IFIconListSizingUpdateIconList(listView);
     });
+    if ([IFTweakIdentifier isEqualToString: IFInfiniboardIdentifier]) {
+        hideSB = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
+        if (hideSB != kIFPartialHideSB) {
+            static dispatch_once_t statusBarFind;
+            static UIView *statusBar;
+            dispatch_once(&statusBarFind, ^{
+                statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
+            });
+            statusBar.backgroundColor = nil;
+        }
+    }
 }
 
 /* }}} */
@@ -416,7 +618,7 @@ static IFIconListDimensions IFSizingMaximumDimensionsForOrientation(UIInterfaceO
     return dimensions;
 }
 
-static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, NSUInteger iconsToAdd) {
+static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
     IFIconListDimensions dimensions = IFIconListDimensionsZero;
     UIInterfaceOrientation orientation = IFIconListOrientation(listView);
 
@@ -425,7 +627,7 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
 
         if (IFConfigurationExpandWhenEditing && [IFIconControllerSharedInstance() isEditing]) {
             // Add room to drop the icon into.
-            idx += iconsToAdd;
+            idx += 1;
         }
 
         IFIconListDimensions maximumDimensions = IFSizingMaximumDimensionsForOrientation(orientation);
@@ -447,10 +649,10 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
 
     IFIconListDimensions defaultDimensions = _IFSizingDefaultDimensions(listView);
 
-    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         // This is ugly, but we need to round up here.
-        dimensions.rows = ceilf((float) dimensions.rows / (float) defaultDimensions.rows) * defaultDimensions.rows;
-        dimensions.columns = ceilf((float) dimensions.columns / (float) defaultDimensions.columns) * defaultDimensions.columns;
+        dimensions.rows = ((dimensions.rows / defaultDimensions.rows) + ((dimensions.rows % defaultDimensions.rows) ? 1 : 0)) * defaultDimensions.rows;
+        dimensions.columns = ((dimensions.columns / defaultDimensions.columns) + ((dimensions.columns % defaultDimensions.columns) ? 1 : 0)) * defaultDimensions.columns;
     }
 
     // Make sure we have at least the default number of icons.
@@ -458,10 +660,6 @@ static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView, 
     dimensions.columns = (dimensions.columns > defaultDimensions.columns) ? dimensions.columns : defaultDimensions.columns;
 
     return dimensions;
-}
-
-static IFIconListDimensions IFSizingContentDimensions(SBIconListView *listView) {
-    return IFSizingContentDimensions(listView, 1);
 }
 
 /* }}} */
@@ -530,15 +728,6 @@ static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconLis
     return info;
 }
 
-static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconList(SBIconListView *listView, NSUInteger iconsToAdd) {
-    IFIconListSizingInformation *info = [[IFIconListSizingInformation alloc] init];
-    [info setDefaultDimensions:_IFSizingDefaultDimensions(listView)];
-    [info setDefaultPadding:_IFSizingDefaultPadding(listView)];
-    [info setDefaultInsets:_IFSizingDefaultInsets(listView)];
-    [info setContentDimensions:IFSizingContentDimensions(listView, iconsToAdd)];
-    return info;
-}
-
 /* }}} */
 
 /* Content Size {{{ */
@@ -548,23 +737,24 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
 
     IFIconListDimensions effectiveDimensions = [info contentDimensions];
     CGSize contentSize = CGSizeZero;
+    CGSize padding = [info defaultPadding];
+    UIEdgeInsets insets = [info defaultInsets];
 
-    if (IFConfigurationFullPages || IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         IFIconListDimensions defaultDimensions = [info defaultDimensions];
         CGSize size = [listView frame].size;
+        CGFloat pageAdjustmentHeight = fabs(padding.height - insets.top - insets.bottom);
 
         IFIconListDimensions result = IFIconListDimensionsZero;
         result.columns = (effectiveDimensions.columns / defaultDimensions.columns);
         result.rows = (effectiveDimensions.rows / defaultDimensions.rows);
-
-        contentSize = CGSizeMake(size.width * result.columns, size.height * result.rows);
-    } else {
-        CGSize padding = [info defaultPadding];
-        UIEdgeInsets insets = [info defaultInsets];
+        contentSize = CGSizeMake(size.width * result.columns, (size.height-pageAdjustmentHeight) * result.rows);
+    } 
+    else {
         CGSize iconSize = IFIconDefaultSize();
 
         contentSize.width = insets.left + effectiveDimensions.columns * (iconSize.width + padding.width) - padding.width + insets.right;
-        contentSize.height = insets.top + effectiveDimensions.rows * (iconSize.height + padding.height) - padding.height + insets.bottom;
+        contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) - padding.height + insets.bottom;
     }
 
     return contentSize;
@@ -596,13 +786,13 @@ static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScroll
             newSize.width = scrollSize.width;
         }
 
-        // Make sure the content offset is never outside the scroll view.
-        if (offset.y + scrollSize.height > newSize.height) {
-            // But not if the scroll view is only a few rows.
-            if (newSize.height >= scrollSize.height) {
-                offset.y = newSize.height - scrollSize.height;
-            }
-        }
+        // // Make sure the content offset is never outside the scroll view.
+        // if (offset.y + scrollSize.height > newSize.height) {
+        //     // But not if the scroll view is only a few rows.
+        //     if (newSize.height >= scrollSize.height) {
+        //         offset.y = newSize.height - scrollSize.height;
+        //     }
+        // }
     }
 
     if (!CGSizeEqualToSize(oldSize, newSize)) {
@@ -622,24 +812,17 @@ static void IFIconListSizingUpdateIconList(SBIconListView *listView) {
     IFIconListSizingUpdateContentSize(listView, scrollView);
 }
 
-static void IFIconListSizingUpdateIconListForDrop(SBIconListView *listView, NSUInteger iconsToAdd) {
-    UIScrollView *scrollView = IFListsScrollViewForListView(listView);
-
-    IFIconListSizingSetInformationForIconList(IFIconListSizingComputeInformationForIconList(listView, iconsToAdd), listView);
-    IFIconListSizingUpdateContentSize(listView, scrollView);
-}
-
 /* }}} */
 
 /* Fixes and Restore Implementation {{{ */
 
 
+#ifdef IFPreferencesRestoreEnabled
 static void IFRestoreIconLists(void) {
-    IFPreferencesApply();
 
     IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
         if (IFPreferencesBoolForKey(IFPreferencesRestoreEnabled)) {
-            [scrollView setContentOffset:CGPointZero animated:YES];
+            [scrollView setContentOffset:CGPointZero animated:NO];
         }
 
         if (IFPreferencesIntForKey(IFPreferencesScrollbarStyle) != kIFScrollbarStyleNone) {
@@ -647,7 +830,9 @@ static void IFRestoreIconLists(void) {
         }
     });
 }
+#endif
 
+#ifdef IFPreferencesFastRestoreEnabled
 static void IFFastRestoreIconLists(void) {
     if (IFPreferencesBoolForKey(IFPreferencesFastRestoreEnabled)) {
         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
@@ -655,6 +840,7 @@ static void IFFastRestoreIconLists(void) {
         });
     }
 }
+#endif
 
 static NSUInteger IFFlagFolderOpening = 0;
 
