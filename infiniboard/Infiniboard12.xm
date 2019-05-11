@@ -29,9 +29,6 @@
 
 /* Configuration {{{ */
 
-#include <os/log.h>
-#include "InspCWrapper.m"
-
 #define IFConfigurationTweakIdentifier Infiniboard12
 #define IFConfigurationListClass SBRootIconListView
 #define IFConfigurationListClassObject (%c(SBRootIconListView) ?: %c(SBIconListView))

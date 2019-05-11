@@ -836,7 +836,7 @@ static void IFRestoreIconLists(void) {
 static void IFFastRestoreIconLists(void) {
     if (IFPreferencesBoolForKey(IFPreferencesFastRestoreEnabled)) {
         IFListsIterateViews(^(SBIconListView *listView, UIScrollView *scrollView) {
-            [scrollView setContentOffset:CGPointZero animated:YES];
+            [scrollView setContentOffset:CGPointZero animated:NO];
         });
     }
 }
