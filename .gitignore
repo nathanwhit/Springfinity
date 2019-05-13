@@ -1,0 +1,10 @@
+*/_/*
+springfinity/obj/*
+springfinity/.theos/*
+*/.theos/*
+*/obj/*
+*.deb
+*.o
+*.log
+*.crash
+*.m4v
