@@ -472,6 +472,16 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
                     // bottomScrollInset *= 1.1;
                 }
             }
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        [NSLayoutConstraint activateConstraints: @[
+            [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor constant:-7]
+        ]];
+    }
+    else {
+        [NSLayoutConstraint activateConstraints: @[
+            [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor]
+        ]];
+    }
         }
     }
     else {

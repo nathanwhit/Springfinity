@@ -108,7 +108,7 @@
 /* }}} */
 
 static void IFIconListInitialize(SBIconListView *listView) {
-    UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView frame]];
+    UIScrollView *scrollView = [[IFConfigurationScrollViewClass alloc] initWithFrame:[listView bounds]];
     [scrollView setDelegate:(id<UIScrollViewDelegate>) listView];
     [scrollView setDelaysContentTouches:NO];
 
@@ -117,6 +117,13 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
     IFIconListSizingUpdateIconList(listView);
     IFPreferencesApplyToList(listView);
+    [NSLayoutConstraint activateConstraints: @[
+        [scrollView.topAnchor constraintEqualToAnchor:listView.topAnchor],
+        [scrollView.leftAnchor constraintEqualToAnchor:listView.leftAnchor],
+        [scrollView.rightAnchor constraintEqualToAnchor:listView.rightAnchor],
+    ]];
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    // listView.translatesAutoresizingMaskIntoConstraints = NO;
 }
 
 %group IFBasic
@@ -158,54 +165,83 @@ static void IFIconListInitialize(SBIconListView *listView) {
     %orig;
 }
 
-- (void)setFrame:(CGRect)frame {
-    if (frame.size.width == 0) {
-        %orig;
-        return;
-    }
-    if (IFIconListIsValid(self)) {
-        UIScrollView *scrollView = IFListsScrollViewForListView(self);
+// - (void)setFrame:(CGRect)frame {
+//     if (IFIconListIsValid(self)) {
+//         %orig;
+//         if (!IFListsScrollViewForListView(self)) {
+//             IFIconListInitialize(self);
+//         }
+//     }
+//     else {
+//         %orig;
+//     }
+// }
 
-        NSUInteger pagex = 0;
-        NSUInteger pagey = 0;
-        CGFloat pagingAdjustmentHeight = 0;
-        bool pages = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
+// - (void)setFrame:(CGRect)frame {
+    // if (frame.size.width == 0) {
+    //     %orig;
+    //     return;
+    // }
+    // if (IFIconListIsValid(self)) {
+        // UIScrollView *scrollView = IFListsScrollViewForListView(self);
+        // %orig;
+        // if (!scrollView) {
+        //     IFIconListInitialize(self);
+        // }
+        // if (scrollView.bounds.size.width == 0 || scrollView.bounds.size.height == 0) {
+            // log("Scrollview was invisible");
+            // [scrollView setFrame:self.bounds];
+        // }
+        // [self layoutIconsNow];
+        // IFIconListSizingUpdateIconList(self);
 
-        if (pages) {
-            CGPoint offset = [scrollView contentOffset];
-            CGRect bounds = [self bounds];
+        // NSUInteger pagex = 0;
+        // NSUInteger pagey = 0;
+        // CGFloat pagingAdjustmentHeight = 0;
+        // bool pages = IFPreferencesBoolForKey(IFPreferencesPagingEnabled);
 
-            pagex = (offset.x / bounds.size.width);
-            pagey = (offset.y / bounds.size.height);
-        }
+        // if (pages) {
+        //     CGPoint offset = [scrollView contentOffset];
+        //     CGRect bounds = [self bounds];
 
-        %orig;
-        if (pages) {
-            IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
-            pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
-            if (scrollView.frame.origin.y != self.frame.origin.y || scrollView.frame.size.height+pagingAdjustmentHeight != self.frame.size.height || scrollView.frame.size.width != self.frame.size.width) {
-                CGRect bounds = self.bounds;
-                bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
-                static dispatch_once_t getInitialTouchInsetsToken;
-                static UIEdgeInsets touchInsets;
-                dispatch_once(&getInitialTouchInsetsToken, ^{
-                    touchInsets = [scrollView _autoScrollTouchInsets];
-                });
-                [scrollView _setAutoScrollTouchInsets:UIEdgeInsetsMake(touchInsets.top / 4, touchInsets.left, touchInsets.bottom / 4, touchInsets.right)];
-                [scrollView setFrame: bounds];
-                [self layoutIconsNow];
-                IFIconListSizingUpdateIconList(self);
-            }
-        }
-        else if (scrollView.frame.origin.y != self.frame.origin.y || self.frame.size.height != scrollView.frame.size.height || self.frame.size.width != self.frame.size.width) {
-            [scrollView setFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
-            [self layoutIconsNow];
-            IFIconListSizingUpdateIconList(self);
-        }
-    } else {
-        %orig;
-    }
-}
+        //     pagex = (offset.x / bounds.size.width);
+        //     pagey = (offset.y / bounds.size.height);
+        // }
+
+        // %orig;
+        // if (pages) {
+        //     IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
+        //     pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
+        //     if (scrollView.frame.origin.y != self.frame.origin.y || scrollView.frame.size.height+pagingAdjustmentHeight != self.frame.size.height || scrollView.frame.size.width != self.frame.size.width) {
+        //         CGRect bounds = self.bounds;
+        //         bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
+        //         static dispatch_once_t getInitialTouchInsetsToken;
+        //         static UIEdgeInsets touchInsets;
+        //         dispatch_once(&getInitialTouchInsetsToken, ^{
+        //             touchInsets = [scrollView _autoScrollTouchInsets];
+        //         });
+        //         [scrollView _setAutoScrollTouchInsets:UIEdgeInsetsMake(touchInsets.top / 4, touchInsets.left, touchInsets.bottom / 4, touchInsets.right)];
+        //         [scrollView setFrame: bounds];
+        //         [self layoutIconsNow];
+        //         IFIconListSizingUpdateIconList(self);
+        //     }
+        //     return;
+        // }
+        // else if (self.frame.size.height != scrollView.frame.size.height || self.frame.size.width != self.frame.size.width) {
+        // // else {
+        //     [scrollView setFrame:self.bounds];
+        //     [self layoutIconsNow];
+        //     IFIconListSizingUpdateIconList(self);
+        //     return;
+        // }
+        // else {
+        //     [scrollView setFrame:self.bounds];
+        //     return;
+        // }
+    // } else {
+    //     %orig;
+    // }
+// }
 
 - (BOOL)shouldReparentView:(UIView*)view {
     if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)] && view.superview.superview == self) {
@@ -218,31 +254,12 @@ static void IFIconListInitialize(SBIconListView *listView) {
 
 
 - (void)addSubview:(UIView *)view {
-    static SBIconListView *lastListView;
-    static UIScrollView *lastScrollView;
-    static __weak SBIconListView *formerLastListView;
-    static __weak UIScrollView *formerLastScrollView;
     if (IFIconListIsValid(self)) {
-        if (lastListView != self) {
-            if (formerLastListView == self) {
-                lastListView = formerLastListView;
-                lastScrollView = formerLastScrollView;
-            }
-            else {
-                formerLastListView = lastListView;
-                formerLastScrollView = lastScrollView;
-                lastListView = self;
-                lastScrollView = IFListsScrollViewForListView(self);
-            }
-            
-        }
-
-        if (view == lastScrollView) {
+        if ([view isMemberOfClass: [IFInfiniboardScrollView class]]) {
             %orig;
         } 
         else {
-            [lastScrollView addSubview:view];
-            // IFIconListSizingUpdateIconList(self);
+            [IFListsScrollViewForListView(self) addSubview:view];
         }
     } 
     else {
@@ -271,15 +288,15 @@ static void IFIconListInitialize(SBIconListView *listView) {
 /* Dimensions {{{ */
 
 + (NSUInteger)maxIcons {
-    if (self == IFConfigurationListClassObject) {
-        if (IFFlagDefaultDimensions) {
-            return %orig;
-        } else {
-            return IFConfigurationExpandedDimension * IFConfigurationExpandedDimension;
-        }
-    } else {
+    // if (self == IFConfigurationListClassObject) {
+    //     if (IFFlagDefaultDimensions) {
+    //         return %orig;
+    //     } else {
+    //         return IFConfigurationExpandedDimension * IFConfigurationExpandedDimension;
+    //     }
+    // } else {
         return %orig;
-    }
+    // }
 }
 
 + (NSUInteger)maxVisibleIconRowsInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
