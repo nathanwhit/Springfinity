@@ -183,7 +183,7 @@ static void IFIconListInitialize(SBIconListView *listView) {
         if (pages) {
             IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(self);
             pagingAdjustmentHeight = fabs(info.defaultPadding.height - info.defaultInsets.top - info.defaultInsets.bottom);
-            if (scrollView.frame.size.height+pagingAdjustmentHeight != self.bounds.size.height || scrollView.frame.size.width != self.bounds.size.width) {
+            if (scrollView.frame.origin.y != self.frame.origin.y || scrollView.frame.size.height+pagingAdjustmentHeight != self.frame.size.height || scrollView.frame.size.width != self.frame.size.width) {
                 CGRect bounds = self.bounds;
                 bounds.size.height = bounds.size.height - pagingAdjustmentHeight;
                 static dispatch_once_t getInitialTouchInsetsToken;
@@ -197,8 +197,8 @@ static void IFIconListInitialize(SBIconListView *listView) {
                 IFIconListSizingUpdateIconList(self);
             }
         }
-        else if (!CGRectEqualToRect(scrollView.frame, self.bounds)) {
-            [scrollView setFrame:self.bounds];
+        else if (scrollView.frame.origin.y != self.frame.origin.y || self.frame.size.height != scrollView.frame.size.height || self.frame.size.width != self.frame.size.width) {
+            [scrollView setFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
             [self layoutIconsNow];
             IFIconListSizingUpdateIconList(self);
         }
@@ -593,6 +593,9 @@ static bool dropping = false;
     return [super gestureRecognizerShouldBegin:gestureRecognizer];
 }
 
+- (void)setFrame:(CGRect)f {
+    [super setFrame:CGRectMake(0,0,f.size.width, f.size.height)];
+}
 @end
 
 /* }}} */
