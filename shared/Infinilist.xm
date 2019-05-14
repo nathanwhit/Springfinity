@@ -449,33 +449,18 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     CGFloat adjustmentAmount = 0;
     CGFloat bottomScrollInset = 0;
     if (clipsStatusbar == kIFFullHideSB) {
-        maskYOffset = (DefaultStatusbarHeight/5)-1;
+        maskYOffset = (DefaultStatusbarHeight/10)-1;
         // bottomScrollInset = -5.5;
     }
 
     if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
         IFSetDockHiding(YES);
-        Class dockClass = NSClassFromString(@"SBDockView");
-        if (hidesDock == kIFHideDockPC) {
-            SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
-            SpringBoard *springboard = IFSpringBoardSharedInstance();
-            if ([springboard homeScreenRotationStyle] != 2 || [springboard activeInterfaceOrientation] < 2) {
-                dockMaskHeight = [dockClass defaultHeight];
-                dockMaskPadding = [dockClass defaultHeightPadding];
-                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(pageControl)]) {
-                    CGRect pageControlFrame = [(SBRootFolderView*)folder pageControl].frame;
-                    adjustmentAmount = -pageControlFrame.size.height*0.6;
-                    // bottomScrollInset *= 1.1;
-                }
-                else {
-                    adjustmentAmount = -DefaultPageControlHeight*0.6;
-                    // bottomScrollInset *= 1.1;
-                }
-            }
-        }
     }
-    else {
-        IFSetDockHiding(NO);
+    if (hidesDock == kIFHideDock || hidesDock == kIFNoHideDock) {
+        if (hidesDock == kIFNoHideDock) {
+            IFSetDockHiding(NO);
+        }
+        adjustmentAmount = screenSize.height - maskYOffset - listView.bounds.size.height;
     }
 
     if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
@@ -491,7 +476,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
 
 
     CALayer *maskLayer = [CALayer layer];
-    maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, screenSize.height + maskYOffset - (dockMaskHeight + 4*dockMaskPadding) + adjustmentAmount);
+    maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, listView.bounds.size.height + maskYOffset + adjustmentAmount);
     maskLayer.backgroundColor = [UIColor blackColor].CGColor;
     // [scrollView layer].mask = maskLayer;
     [listView layer].mask = maskLayer;
