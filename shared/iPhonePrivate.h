@@ -239,6 +239,7 @@ typedef struct SBIconCoordinate {
 - (CGRect)effectivePageControlFrame;
 - (id)dockView;
 - (void)_updateDockViewZOrdering;
+- (UIView*)pageControl;
 @end
 
 @interface SBUIController : NSObject

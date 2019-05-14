@@ -459,11 +459,11 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         if (hidesDock == kIFHideDockPC) {
             SBFolderView *folder = [[[IFIconControllerSharedInstance() contentView] childFolderContainerView] folderView];
             SpringBoard *springboard = IFSpringBoardSharedInstance();
-            if ([springboard homeScreenRotationStyle] != 2 && [springboard activeInterfaceOrientation] < 2) {
+            if ([springboard homeScreenRotationStyle] != 2 || [springboard activeInterfaceOrientation] < 2) {
                 dockMaskHeight = [dockClass defaultHeight];
                 dockMaskPadding = [dockClass defaultHeightPadding];
-                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(effectivePageControlFrame)]) {
-                    CGRect pageControlFrame = [(SBRootFolderView*)folder effectivePageControlFrame];
+                if ([folder isKindOfClass:NSClassFromString(@"SBRootFolderView")] && [folder respondsToSelector: @selector(pageControl)]) {
+                    CGRect pageControlFrame = [(SBRootFolderView*)folder pageControl].frame;
                     adjustmentAmount = -pageControlFrame.size.height*0.6;
                     // bottomScrollInset *= 1.1;
                 }
@@ -472,6 +472,12 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
                     // bottomScrollInset *= 1.1;
                 }
             }
+        }
+    }
+    else {
+        IFSetDockHiding(NO);
+    }
+
     if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
         [NSLayoutConstraint activateConstraints: @[
             [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor constant:-7]
@@ -481,11 +487,6 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         [NSLayoutConstraint activateConstraints: @[
             [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor]
         ]];
-    }
-        }
-    }
-    else {
-        IFSetDockHiding(NO);
     }
 
 
