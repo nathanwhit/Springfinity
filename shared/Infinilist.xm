@@ -447,10 +447,9 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     CGFloat dockMaskPadding = 0;
     CGFloat maskYOffset = listView.bounds.size.height / 6;
     CGFloat adjustmentAmount = 0;
-    CGFloat bottomScrollInset = 0;
+    CGFloat bottomScrollInset = 3;
     if (clipsStatusbar == kIFFullHideSB) {
-        maskYOffset = -3;
-        // bottomScrollInset = -5.5;
+        maskYOffset = 2;
     }
 
     if (hidesDock == kIFHideDock || hidesDock == kIFHideDockPC) {
@@ -474,7 +473,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         ]];
     }
 
-    if ([IFStatusbarSharedInstance() frame].size.height > DefaultStatusbarHeight) {
+    if ([IFStatusbarSharedInstance() frame].size.height >= DefaultStatusbarHeight*2) {
         adjustmentAmount = -IFIconDefaultSize().height/4;
     }
 
@@ -483,6 +482,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     maskLayer.backgroundColor = [UIColor blackColor].CGColor;
     // [scrollView layer].mask = maskLayer;
     [listView layer].mask = maskLayer;
+    [scrollView setContentInset:UIEdgeInsetsMake(0, 0, bottomScrollInset, 0)];
 }
 
 static void IFPreferencesApplyToList(SBIconListView *listView) {
