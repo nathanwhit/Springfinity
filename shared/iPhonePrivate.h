@@ -39,6 +39,10 @@ typedef struct SBIconCoordinate {
 - (void)addExtension:(NSString *)name;
 @end
 
+@interface UIStatusBar : UIView
+@property (nonatomic, getter=isDoubleHeight) BOOL doubleHeight;
+@end
+
 @interface UIScreen (priv)
 - (id)_accessibilityStatusBar;
 @end

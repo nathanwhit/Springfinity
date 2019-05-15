@@ -344,8 +344,8 @@ __attribute__((unused)) static SBRootFolder *IFRootFolderSharedInstance() {
     return rootFolder;
 }
 
-__attribute__((unused)) static UIView *IFStatusbarSharedInstance() {
-    static __weak UIView *statusBar;
+__attribute__((unused)) static UIStatusBar *IFStatusbarSharedInstance() {
+    static __weak UIStatusBar *statusBar;
     if (!statusBar) {
         statusBar = [[UIScreen mainScreen] _accessibilityStatusBar];
     }
@@ -445,11 +445,11 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     CGSize screenSize = [[UIScreen mainScreen] bounds].size;
     CGFloat dockMaskHeight = 0;
     CGFloat dockMaskPadding = 0;
-    CGFloat maskYOffset = DefaultStatusbarHeight+3;
+    CGFloat maskYOffset = listView.bounds.size.height / 6;
     CGFloat adjustmentAmount = 0;
     CGFloat bottomScrollInset = 0;
     if (clipsStatusbar == kIFFullHideSB) {
-        maskYOffset = (DefaultStatusbarHeight/10)-1;
+        maskYOffset = -3;
         // bottomScrollInset = -5.5;
     }
 
@@ -474,6 +474,9 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         ]];
     }
 
+    if ([IFStatusbarSharedInstance() frame].size.height > DefaultStatusbarHeight) {
+        adjustmentAmount = -IFIconDefaultSize().height/4;
+    }
 
     CALayer *maskLayer = [CALayer layer];
     maskLayer.frame = CGRectMake(0, -maskYOffset, screenSize.width, listView.bounds.size.height + maskYOffset + adjustmentAmount);
