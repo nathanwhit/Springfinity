@@ -6,6 +6,6 @@ Section: Tweaks
 Pre-Depends: firmware (>= 11.0)
 Depends: mobilesubstrate, preferenceloader
 Suggests: com.chpwn.iconsupport
-Version: 1.1.5
+Version: 1.1.6
 Architecture: iphoneos-arm
 Description: A remake of infiniboard for iOS 11 & 12. Scroll vertically on your homescreen.
