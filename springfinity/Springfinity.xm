@@ -427,8 +427,6 @@ UIView *fakeSuperview(id self, SEL _cmd) {
 
 static __weak SBIconView *recipientIcon;
 
-UIView *(*oldSuperview)(id self, SEL _cmd);
-
 static void IFSetSuperviewImp(IMP implem) {
     static dispatch_once_t lookupIconViewClassToken;
     static Class iconViewClass;
@@ -506,7 +504,15 @@ static bool dropping = false;
 
 - (id)targetItemForSpringLoadingInteractionInView:(id)arg1 atLocation:(CGPoint)arg2 forDropSession:(id)arg3 {
     if ([arg1 isMemberOfClass:IFConfigurationListClassObject]) {
-        [self updateSpringLoadedPolicyHandlerForDropSession:arg3];
+        if ([self respondsToSelector: @selector(updateSpringLoadedPolicyHandlerForDropSession:)]) {
+            [self updateSpringLoadedPolicyHandlerForDropSession:arg3];
+        }
+        else if ([self respondsToSelector: @selector(updateCurrentPolicyHandlerForDropSession:)]) {
+            [self updateCurrentPolicyHandlerForDropSession:arg3];
+        }
+        else {
+            return %orig;
+        }
         SBIcon *newIcon = [arg1 iconAtPoint:arg2 index:nil];
         SBIconView *newTarget = [[arg1 viewMap] mappedIconViewForIcon:newIcon];
         return newTarget;

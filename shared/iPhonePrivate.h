@@ -169,8 +169,12 @@ typedef struct SBIconCoordinate {
 - (void)_updateForOrientation:(UIInterfaceOrientation)orientation duration:(NSTimeInterval)interval;
 @end
 
-@interface SBIconListViewDraggingDestinationDelegate
+@interface SBIconListViewDraggingDestinationDelegate : NSObject
 - (BOOL)updateSpringLoadedPolicyHandlerForDropSession:(id)arg1;
+@end
+
+@interface SBIconListViewDraggingDestinationDelegate (ios11)
+- (_Bool)updateCurrentPolicyHandlerForDropSession:(id)arg1;
 @end
 
 @interface SBFolderView : UIView
