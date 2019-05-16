@@ -459,7 +459,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         if (hidesDock == kIFNoHideDock) {
             IFSetDockHiding(NO);
         }
-        adjustmentAmount = screenSize.height - maskYOffset - listView.bounds.size.height;
+        adjustmentAmount = screenSize.height - listView.bounds.size.height;
     }
 
     if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
