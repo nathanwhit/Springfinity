@@ -473,7 +473,7 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
         ]];
     }
 
-    if ([IFStatusbarSharedInstance() frame].size.height >= DefaultStatusbarHeight*2) {
+    if (hidesDock == kIFHideDockPC && [IFStatusbarSharedInstance() frame].size.height >= DefaultStatusbarHeight*2) {
         adjustmentAmount = -IFIconDefaultSize().height/4;
     }
 
@@ -739,7 +739,7 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
     CGSize padding = [info defaultPadding];
     UIEdgeInsets insets = [info defaultInsets];
 
-    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled) == YES) {
         IFIconListDimensions defaultDimensions = [info defaultDimensions];
         CGSize size = [listView frame].size;
         CGFloat pageAdjustmentHeight = fabs(padding.height - insets.top - insets.bottom);
@@ -756,7 +756,7 @@ static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
         contentSize.height = insets.top + (effectiveDimensions.rows * (iconSize.height + padding.height)) - padding.height + insets.bottom;
     }
 
-    [listView setFrame:listView.frame];
+    // [listView setFrame:listView.frame];
 
     return contentSize;
 }
@@ -787,13 +787,13 @@ static void IFIconListSizingUpdateContentSize(SBIconListView *listView, UIScroll
             newSize.width = scrollSize.width;
         }
 
-        // // Make sure the content offset is never outside the scroll view.
-        // if (offset.y + scrollSize.height > newSize.height) {
-        //     // But not if the scroll view is only a few rows.
-        //     if (newSize.height >= scrollSize.height) {
-        //         offset.y = newSize.height - scrollSize.height;
-        //     }
-        // }
+        // Make sure the content offset is never outside the scroll view.
+        if (offset.y + scrollSize.height > newSize.height) {
+            // But not if the scroll view is only a few rows.
+            if (newSize.height >= scrollSize.height) {
+                offset.y = newSize.height - scrollSize.height;
+            }
+        }
     }
 
     if (!CGSizeEqualToSize(oldSize, newSize)) {

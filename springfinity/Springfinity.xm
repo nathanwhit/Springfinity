@@ -120,13 +120,14 @@ static void IFIconListInitialize(SBIconListView *listView) {
     [NSLayoutConstraint activateConstraints: @[
         [scrollView.topAnchor constraintEqualToAnchor:listView.topAnchor],
         [scrollView.leftAnchor constraintEqualToAnchor:listView.leftAnchor],
-        [scrollView.rightAnchor constraintEqualToAnchor:listView.rightAnchor],
+        [scrollView.rightAnchor constraintEqualToAnchor:listView.rightAnchor]
     ]];
     scrollView.translatesAutoresizingMaskIntoConstraints = NO;
     // listView.translatesAutoresizingMaskIntoConstraints = NO;
 }
 
 %group IFBasic
+
 %hook SBRootIconListView
 
 /* View Hierarchy {{{ */
@@ -242,6 +243,19 @@ static void IFIconListInitialize(SBIconListView *listView) {
     //     %orig;
     // }
 // }
+    // (
+- (void)setFrame:(CGRect)fr {
+    %orig;
+    if (IFIconListIsValid(self)) {
+        IFIconListSizingUpdateIconList(self);
+    }
+}
+- (void)setBounds:(CGRect)b {
+    %orig;
+    if (IFIconListIsValid(self)) {
+        IFIconListSizingUpdateIconList(self);
+    }
+}
 
 - (BOOL)shouldReparentView:(UIView*)view {
     if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)] && view.superview.superview == self) {
