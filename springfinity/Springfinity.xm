@@ -542,6 +542,7 @@ static bool dropping = false;
         NSUInteger col = [self columnAtPoint:arg1]+1;
         NSUInteger numCols = [self iconColumnsForCurrentOrientation];
         NSUInteger index = ((row-1) * numCols) + col - 1;
+        arg2 = &index;
         return [[self model] iconAtIndex: index];
     }
     return %orig;

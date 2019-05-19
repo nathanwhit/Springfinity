@@ -240,6 +240,9 @@ static void printViewHierarchy(UIView *v, Class lowestClass = Nil, Class exclude
 
 /* }}} */
 
+// Forward Declaration
+static CGFloat IFIconListPagingAdjustmentHeight(SBIconListView *listView);
+
 /* Conveniences {{{ */
 
 __attribute__((unused)) static NSUInteger IFMinimum(NSUInteger x, NSUInteger y) {
@@ -463,8 +466,9 @@ static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollVi
     }
 
     if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled)) {
+        CGFloat pagingAdjustmentHeight = IFIconListPagingAdjustmentHeight(listView);
         [NSLayoutConstraint activateConstraints: @[
-            [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor constant:-7]
+            [scrollView.bottomAnchor constraintEqualToAnchor:listView.bottomAnchor constant: -pagingAdjustmentHeight]
         ]];
     }
     else {
@@ -730,6 +734,28 @@ static IFIconListSizingInformation *IFIconListSizingComputeInformationForIconLis
 /* }}} */
 
 /* Content Size {{{ */
+
+static CGFloat IFIconListPagingAdjustmentHeight(SBIconListView *listView) {
+    IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(listView);
+
+    IFIconListDimensions effectiveDimensions = [info contentDimensions];
+    CGSize padding = [info defaultPadding];
+    UIEdgeInsets insets = [info defaultInsets];
+    static CGFloat DefaultPageAdjustment = 7;
+
+    if (IFPreferencesBoolForKey(IFPreferencesPagingEnabled) == YES) {
+        IFIconListDimensions defaultDimensions = [info defaultDimensions];
+        CGSize size = [listView frame].size;
+        CGFloat pageAdjustmentHeight = fabs(padding.height - insets.top - insets.bottom);
+        if (pageAdjustmentHeight && info) {
+            return pageAdjustmentHeight;
+        }
+        return DefaultPageAdjustment;
+    }
+    else {
+        return 0;
+    }
+}
 
 static CGSize IFIconListSizingEffectiveContentSize(SBIconListView *listView) {
     IFIconListSizingInformation *info = IFIconListSizingInformationForIconList(listView);
