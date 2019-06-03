@@ -659,4 +659,4 @@ static bool dropping = false;
     %init(IFBasic);
 }
 
-/* }}}
+/* }}} */
