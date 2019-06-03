@@ -246,17 +246,25 @@ static void IFIconListInitialize(SBIconListView *listView) {
 // }
     // (
 - (void)setFrame:(CGRect)fr {
+    CGSize currentSize = self.frame.size;
+    if (IFIconListIsValid(self) && !CGSizeEqualToSize(currentSize, fr.size)) {
     %orig;
-    if (IFIconListIsValid(self)) {
         IFIconListSizingUpdateIconList(self);
+        if (IFListsScrollViewForListView(self)) {
+            IFPreferencesApplyToList(self);
     }
 }
-- (void)setBounds:(CGRect)b {
+    else {
     %orig;
-    if (IFIconListIsValid(self)) {
-        IFIconListSizingUpdateIconList(self);
     }
 }
+// - (void)setBounds:(CGRect)b {
+//     log("SETTING BOUNDS");
+//     %orig;
+//     if (IFIconListIsValid(self)) {
+//         IFIconListSizingUpdateIconList(self);
+//     }
+// }
 
 - (BOOL)shouldReparentView:(UIView*)view {
     if ([[view superview] isKindOfClass:%c(IFInfiniboardScrollView)] && view.superview.superview == self) {
