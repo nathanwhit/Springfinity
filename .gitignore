@@ -8,3 +8,4 @@ springfinity/.theos/*
 *.log
 *.crash
 *.m4v
+.*
