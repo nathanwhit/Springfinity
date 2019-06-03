@@ -181,6 +181,10 @@ typedef enum {
     #define IFPreferencesClipsDock @"ClipsDock", kIFHideDock
 #endif
 
+#ifndef IFPreferencesTopOnTap
+    #define IFPreferencesTopOnTap @"TopOnTap", YES
+#endif
+
 #define DefaultStatusbarHeight 20
 
 #define DefaultPageControlHeight 37
@@ -442,8 +446,10 @@ static void IFSetDockHiding(BOOL hide) {
 static void IFPreferencesApplyToInfiniboard(SBIconListView *listView, UIScrollView *scrollView) {
     IFSBHiding clipsStatusbar = (IFSBHiding)IFPreferencesIntForKey(IFPreferencesClipsStatusbar);
     IFDockHiding hidesDock = (IFDockHiding)IFPreferencesIntForKey(IFPreferencesClipsDock);
-    [scrollView setClipsToBounds:NO];
-    [listView setClipsToBounds:NO];
+    BOOL topOnTap = IFPreferencesBoolForKey(IFPreferencesTopOnTap);
+    scrollView.clipsToBounds = NO;
+    listView.clipsToBounds = NO;
+    scrollView.scrollsToTop = topOnTap;
 
     CGSize screenSize = [[UIScreen mainScreen] bounds].size;
     CGFloat dockMaskHeight = 0;

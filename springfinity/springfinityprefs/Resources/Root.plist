@@ -182,6 +182,20 @@
 			<key>defaults</key>
 			<string>com.nwhit.springfinityprefs</string>
 		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>key</key>
+			<string>TopOnTap</string>
+			<key>label</key>
+			<string>Scroll to Top on Statusbar Tap</string>
+			<key>PostNotification</key>
+			<string>com.nwhit.springfinityprefs.preferences-changed</string>
+			<key>defaults</key>
+			<string>com.nwhit.springfinityprefs</string>
+		</dict>
 	</array>
 </dict>
 </plist>
