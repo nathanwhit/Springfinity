@@ -639,6 +639,20 @@ static bool dropping = false;
 
 /* }}} */
 
+%group rotation
+%hook SpringBoard
+- (NSInteger)homeScreenRotationStyle {
+    return 2;
+}
+%end
+
+%hook SBWindow
+- (BOOL)_sb_autorotates {
+    return YES;
+}
+%end
+%end
+
 /* Constructor {{{ */
 
 %ctor {
@@ -649,6 +663,7 @@ static bool dropping = false;
     [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"springfinity"];
     %init(IFInfiniboard);
     %init(IFBasic);
+    %init(rotation);
 }
 
 /* }}}
